@@ -30,7 +30,14 @@ MAX_WAIT = 20
 import argparse
 import math
 import os
-#Specifing arguments (user inputs)
+def log_found(street,args):
+    # global log_street_link_file
+    if os.path.isdir('/'.join(args.found_path.split('/')[:-1])) == False:
+        os.makedirs('/'.join(args.found_path.split('/')[:-1]))
+    if not os.path.exists(args.found_path):
+        open(args.found_path, 'w').write('%s\n' % (street))
+    open(args.found_path, 'a').write('%s\n' % (street))
+
 def log_unfound(street,args):
     # global log_street_link_file
     if os.path.isdir('/'.join(args.unfound_path.split('/')[:-1])) == False:
@@ -39,6 +46,7 @@ def log_unfound(street,args):
         open(args.unfound_path, 'w').write('%s\n' % (street))
     open(args.unfound_path, 'a').write('%s\n' % (street))
 
+#Specifing arguments (user inputs)
 def parse_arguments():
 
     parser = argparse.ArgumentParser()
@@ -75,6 +83,14 @@ def parse_arguments():
         type=str,
         default='./Data/Reviews/TripAdvisor/unfound_streets_reviews_TripAdvisor.txt',
         help="Record unfound streets or streets without reviews",
+    )
+    parser.add_argument(
+        '-ff',
+        "--found_path",
+        required=True,
+        type=str,
+        default='./Data/Reviews/TripAdvisor/found_streets_reviews_TripAdvisor.txt',
+        help="local path where you record streets with complete reviews.",
     )
     # args = parser.parse_args(args=[])
     args = parser.parse_args()#args=[]
@@ -118,23 +134,33 @@ def main():
         streets_toscrape = [street for street in streets if street not in unfounded_streets]
     else:
         streets_toscrape = streets
+    #Open founded street txt and remove records that are existed in review_dataset (save_path) from streets_toscrape
+    if os.path.exists(args.found_path) == True:
+        with open(args.found_path) as f:
+            lines = f.readlines()
+        founded_streets = [line.split('\n')[0] for line in lines]
+        founded_streets = list(set(founded_streets))
+        streets_toscrape = [street for street in streets_toscrape if street not in founded_streets]
     print('Need to scrape data for {} streets'.format(len(streets_toscrape)))
     driver.get('https://www.tripadvisor.com.sg/')
-    print('Getting streets that have been scraped...')
-    csv_files = glob.glob(args.save_path+'/*.csv')
-    if len(csv_files) != 0:
-        all_df = concat(csv_files)
-        print('Dataframe columns of scraped files:', all_df.columns)
-        # scraped_streets = list(all_df.street.unique())
-        for num, street in enumerate(streets_toscrape):
-            existing_streets_num = all_df[all_df.street == street].count()[0]
-            if existing_streets_num < int(all_df[all_df.street == street].total_reviews.iloc[-1]) - 11:
-                scrapy_street(num, street, args)
-        # streets_toscrape = [street for street in streets if street not in scraped_streets]
-    else:
-        for num, street in enumerate(streets_toscrape):
-            scrapy_street(num, street, args)
-            sleep(8)
+    # print('Getting streets that have been scraped...')
+    # csv_files = glob.glob(args.save_path+'/*.csv')
+    # if len(csv_files) != 0:
+    #     all_df = concat(csv_files)
+    #     print('Dataframe columns of scraped files:', all_df.columns)
+    #     # scraped_streets = list(all_df.street.unique())
+    #     for num, street in enumerate(streets_toscrape):
+    #         last_page = all_df[all_df.street == street].page.iloc[-1]
+    #         if last_page != all_df[all_df.street == street].final_page.iloc[-1]:
+    #             scrapy_street(num, street, args)
+    #     # streets_toscrape = [street for street in streets if street not in scraped_streets]
+    # else:
+    #     for num, street in enumerate(streets_toscrape):
+    #         scrapy_street(num, street, args)
+    #         sleep(8)
+    for num, street in enumerate(streets_toscrape):
+        scrapy_street(num, street, args)
+        sleep(8)
 
 
 
@@ -218,7 +244,8 @@ def scrapy_street(num,street, args):
                 # Capture "Read more" buttons and click each of them to expand reviews
                 expand_read_more()
                 #Looping through pages and parse the content
-                for i in range(1, math.ceil(total_reviews/10)): #
+                for i in range(1, math.ceil(total_reviews/10)+1): #
+                    print(i)
                     if i >=2:
                         next_page =current_url.split('Reviews-')[0]+ 'Reviews'+'-or{}-'.format(i*10-10)+current_url.split('Reviews-')[1]
                         try:
@@ -248,6 +275,7 @@ def scrapy_street(num,street, args):
             except:
                 Scrolling = False
                 break
+        log_found(street,args)
     else:
         print('No reviews for No.{} street {}.'.format(num, street))
         log_unfound(street,args)
