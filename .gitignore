@@ -3,3 +3,5 @@ Data/Chengdu_streets_cn.csv
 Data/London_streets.csv
 Data/OSM_streets.Rmd
 Data/processing_data.py
+Data/Reviews/GoogleMap/
+Data/Reviews/TripAdvisor/
