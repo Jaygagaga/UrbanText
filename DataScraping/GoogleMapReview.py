@@ -312,7 +312,7 @@ def review_parser(response,street,args,total_reviews,total_rating,category,local
         data['review_id'] = box['data-review-id']
         data['user'] = box.find("div",class_='d4r55').text.strip() if box.find("div",class_='d4r55') else None
         data['guide'] = box.find("div", class_='RfnDt').find_all('span')[0].text if box.find("div", class_='RfnDt') else None
-        data['review_text'] = box.find("span", class_='wiI7pd').text if box.find("div", class_='wiI7pd') else None
+        data['review_text'] = box.find("span", class_='wiI7pd').text if box.find("span", class_='wiI7pd') else None
         data['review_date'] = box.find('span',class_='rsqaWe').text if box.find('span',class_='rsqaWe') else None
         try:
             data['review_rating'] = box.find('span', attrs={'aria-label': re.compile('stars')})['aria-label'].strip().split(' star')[0] if box.find('span', attrs={'aria-label': re.compile('stars')})['aria-label'].strip().split(' star')[0] != 'stars' else box.find('span', class_='fzvQIb').text

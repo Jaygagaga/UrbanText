@@ -115,7 +115,9 @@ def main():
             lines = f.readlines()
         unfounded_streets = [line.split('\n')[0] for line in lines]
         exsiting_streets = list(set(unfounded_streets))
-    streets_toscrape = [street for street in streets if street not in unfounded_streets]
+        streets_toscrape = [street for street in streets if street not in unfounded_streets]
+    else:
+        streets_toscrape = streets
     print('Need to scrape data for {} streets'.format(len(streets_toscrape)))
     driver.get('https://www.tripadvisor.com.sg/')
     print('Getting streets that have been scraped...')
