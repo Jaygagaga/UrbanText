@@ -19,7 +19,6 @@ options.add_experimental_option('excludeSwitches', ['enable-automation'])
 options.add_argument('--incognito')  # 隐身模式（无痕模式）
 options.add_argument("--disable-blink-features")
 options.add_argument("--disable-blink-features=AutomationControlled")
-chromdriver_path = "/Users/jie/Downloads/chromedriver1" #Replacing it with your chromdriver_path
 # driver = webdriver.Chrome(executable_path=, options=options)
 from bs4 import BeautifulSoup
 # driver.maximize_window()
@@ -83,6 +82,16 @@ def parse_arguments():
         default='./Data/Reviews/GoogleMap/unfound_streets_reviews_GoogleMap.txt',
         help="Record unfound streets or streets without reviews",
     )
+    parser.add_argument(
+        '-driver',
+        "--driver_path",
+        required=True,
+        type=str,
+        default="/Users/jie/Downloads/chromedriver1",
+        help="Record unfound streets or streets without reviews",
+    )
+
+
 
     # args = parser.parse_args(args=[])
     args = parser.parse_args()#args=[]
@@ -368,6 +377,7 @@ def main():
     # scraped_streets = list(all_df.street.unique())
     # streets_toscrape = [street for street in streets if street not in scraped_streets]
     # print('Need to scrape data for {} streets'.format(len(streets_toscrape)))
+    chromdriver_path = args.driver_path  # Replacing it with your chromdriver_path
     ser = Service(r"{}".format(chromdriver_path))
     driver = webdriver.Chrome(service=ser, options=options)
     sleep(1)
