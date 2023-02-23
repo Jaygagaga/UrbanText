@@ -14,7 +14,7 @@ import os
 import glob
 import pandas as pd
 from time import sleep
-from DataScraping.TripAdvisor import review_parser,concat
+
 options = webdriver.ChromeOptions()
 options.add_experimental_option('excludeSwitches', ['enable-automation'])
 options.add_argument('--incognito')  # 隐身模式（无痕模式）
@@ -65,8 +65,7 @@ def parse_arguments():
         '-c',
         "--cities",
         required=True,
-        type=list,
-        default=['Beijing','Wuhan','Chengdu'],
+        nargs='+',
         help='city list',
     )
 
@@ -75,7 +74,7 @@ def parse_arguments():
         "--save_path_links",
         required=True,
         type=str,
-        default='./Data/Reviews/TripAdvisor/loc_links',
+        default='./Data/Reviews/TripAdvisor/loc_reviews/loc_links_Wuhan.csv',
         help="local path where you want to save your scraped data",
     )
     parser.add_argument(
@@ -91,7 +90,7 @@ def parse_arguments():
         "--unfound_path",
         required=True,
         type=str,
-        default='./Data/Reviews/TripAdvisor/unfound_streets_reviews_TripAdvisor.txt',
+        default='./Data/Reviews/TripAdvisor/unfound_POIs_reviews_TripAdvisor.txt',
         help="Record unfound streets or streets without reviews",
     )
     parser.add_argument(
@@ -99,7 +98,7 @@ def parse_arguments():
         "--found_path",
         required=True,
         type=str,
-        default='./Data/Reviews/TripAdvisor/found_streets_reviews_TripAdvisor.txt',
+        default='./Data/Reviews/TripAdvisor/found_POIs_reviews_TripAdvisor.txt',
         help="local path where you record streets with complete reviews.",
     )
     parser.add_argument(
@@ -132,6 +131,28 @@ def concat(csv_files):
 #
 # street = 'covert garden'
 # city = 'London'
+def go_to_city(driver,city,args):
+    wait = WebDriverWait(driver, MAX_WAIT)
+    try:
+        box = wait.until(
+            EC.element_to_be_clickable((By.XPATH, '//*[@id="component_2"]/div/div/form/input[1]')))
+        sleep(5)
+    except TimeoutException:
+        print('Cannot locate search box')
+    sleep(3)
+    box.send_keys(city)
+    sleep(2)
+    url = driver.find_element(By.XPATH,
+                        './/div[@id="typeahead_results"]/a[@class="GzJDZ w z _S _F Wc Wh Q B- _G"]').get_attribute('href')
+    # sleep(5)
+    # print('Getting POI links for {} city'.format(city))
+    # sleep(5)
+    # url = driver.find_element(By.XPATH,'.//a[@class="UikNM _G B- _S _T c G_ P0 wSSLS wnNQG raEkE"]').get_attribute('href')
+    # url = driver.current_url
+    url = url.split('Activities')[0] + 'oa0' + url.split('Activities')[1]
+    scrapy_loc(url, city, args)  # Getting all POIs information (location name, loction url, location review counts) in city
+    sleep(8)
+
 
 def main():
     os.chdir('/Users/jie/UrbanText')
@@ -140,51 +161,133 @@ def main():
     streets_df = pd.read_csv(args.file_path)
     streets = list(streets_df.Street.unique())
 
-    print('City:',args.city)
     print('Save path:', args.save_path)
     print('File path:', args.file_path)
-    print('Getting POI links for cities')
-    wait = WebDriverWait(driver, MAX_WAIT)
+    print('City lists:', args.cities)
+
+
     # print('Need to scrape data for {} streets'.format(len(streets_toscrape)))
     if args.option == 'street_urls':
         driver.get('https://www.tripadvisor.com.sg/Attractions')
 
         for num, city in enumerate(args.cities):
-            try:
-                # search = wait.until(EC.element_to_be_clickable((By.XPATH, './/span[@class="QLiHN o W"]')))
-                # search.click()
-                box = wait.until(
-                    EC.element_to_be_clickable((By.XPATH, '//*[@id="component_2"]/div/div/form/input[1]')))
-            except TimeoutException:
-                print('Cannot locate search box')
-            sleep(3)
-            box.send_keys(city)
-            driver.find_element(By.XPATH,
-                                './/div[@id="typeahead_results"]/a[@class="GzJDZ w z _S _F Wc Wh Q B- _G"]').click()
-            sleep(5)
-            driver.find_element(By.XPATH,'.//span[@class="KbzWw"]')
-            url = driver.current_url
-            url = url.split('Activities')[0]+'oa0'+url.split('Activities')[1]
-            driver.get(url)
-            scrapy_street(num, city, args)
-            sleep(8)
+            go_to_city(driver, city, args)
+
+
     if args.option == 'street_reviews':
         driver.get('https://www.tripadvisor.com.sg/Attractions')
-        csv_files = glob.glob(args.save_path_links + '/*.csv')
-        if len(csv_files) != 0:
-            all_df = concat(csv_files)
-            print('Dataframe columns of scraped files:', all_df.columns)
-            loc_urls = list(all_df.urls.unique())
-            for url in loc_urls:
-                driver.execute_script("window.open('');")
-                driver.switch_to.window(driver.window_handles[1])
-                driver.get(url)
-                response = BeautifulSoup(driver.page_source, 'html.parser')
-                review_parser(response, city,args,i, total_reviews)
+        loc_df = pd.read_csv(args.save_path_links)
+        loc_df = loc_df[loc_df.url.isnull()==False]
+        loc_df = loc_df.drop_duplicates('loc')
+        city = loc_df.city.iloc[0]
+        # Open unfounded street txt and move records from streets_toscrape
+        if os.path.exists(args.unfound_path) == True:
+            with open(args.unfound_path) as f:
+                lines = f.readlines()
+            unfounded_locs = [line.split('\n')[0] for line in lines]
+            exsiting_streets = list(set(unfounded_locs))
+            rest_loc =[loc for loc in loc_df['loc'].to_list() if loc not in unfounded_locs]
+            locs_toscrape = loc_df[loc_df['loc'].isin(rest_loc)]
+
+        else:
+            locs_toscrape = loc_df
+        # Open founded street txt and remove records that are existed in review_dataset (save_path) from streets_toscrape
+        if os.path.exists(args.found_path) == True:
+            with open(args.found_path) as f:
+                lines = f.readlines()
+            founded_locs = [line.split('\n')[0] for line in lines]
+            rest_loc = [loc for loc in loc_df['loc'].to_list() if loc not in founded_locs]
+            locs_toscrape = loc_df[loc_df['loc'].isin(rest_loc)]
+
+        for num, (url,loc) in enumerate(zip(locs_toscrape['url'],locs_toscrape['loc'])):
+            # print(num,url,loc)
+            # break
+            driver.execute_script("window.open('');")
+            driver.switch_to.window(driver.window_handles[1])
+            driver.get('https://www.tripadvisor.com.sg'+url)
+            sleep(5)
+            Scrolling = True
+            #Got to review sections
+            try:
+                review = driver.find_element(By.XPATH, './/a[contains(@href, "#REVIEWS")]')
+
+                try:
+                    local_name = driver.find_element(By.XPATH, './/h1[@class= "biGQs _P fiohW eIegw"]').text
+                except:
+                    local_name = None
+                    # print('Cannot get local name for {}'.format(loc))
+                try:
+                    total_reviews = int(
+                        driver.find_element(By.XPATH, './/div[@class="Ci"]').text.split()[-1].replace(',', ''))
+                except:
+                    total_reviews = None
+                if not total_reviews:
+                    try:
+                        total_reviews = int(
+                            driver.find_element(By.XPATH, './/span[@class="qqniT"]').text.split()[0].replace(',',
+                                                                                                             ''))
+                    except:
+                        total_reviews = None
+                if not total_reviews:
+                    try:
+                        total_reviews = int(
+                            driver.find_element(By.XPATH, './/span[@class="yyzcQ"]').text.split()[0].replace(',', ''))
+                    except:
+                        total_reviews = None
+                review.click()  # Go to the review section of the page
+                sleep(4)
+            except NoSuchElementException:
+                print('Cannot locate review sections')  # class="Jktgk Mc"
+                log_unfound(loc, args)
+                Scrolling = False
 
 
+            # Capture current page url
+            current_url = driver.current_url
+            count = 0
+            while Scrolling:
+                try:
+                    # Capture "Read more" buttons and click each of them to expand reviews
+                    expand_read_more()
+                    # Looping through pages and parse the content
+                    for i in range(1, math.ceil(total_reviews / 10) + 1):  #
+                        print(i)
+                        if i >= 2:
+                            next_page = current_url.split('Reviews-')[0] + 'Reviews' + '-or{}-'.format(
+                                i * 10 - 10) + current_url.split('Reviews-')[1]
+                            try:
+                                driver.get(next_page)
+                                sleep(5)
+                                expand_read_more()
+                                sleep(5)
+                            except NoSuchElementException:
+                                print('Cannot locate next page')
+                                pass
+                        if check_review2(driver):  # or check_review1(driver)
 
+                            response = BeautifulSoup(driver.page_source, 'html.parser')
+                            sleep(2)
+                            review_parser(response, loc, args, i, total_reviews,local_name,city)
+                            sleep(6)
+                        else:
+                            print("No reviews anymore.")
+                            count += 1
+                            if count >= 3:
+                                Scrolling = False
+                                break
+                    Scrolling = False
+                    break
 
+                    # print('Finished scraping %s' % street)
+                    # driver.close()
+                    # driver.switch_to.window(driver.window_handles[0])
+                except:
+                    Scrolling = False
+                    break
+            log_found(loc, args)
+
+        driver.close()
+        driver.switch_to.window(driver.window_handles[0])
 
 
 
@@ -212,11 +315,12 @@ def check_review2(driver):
     else:
         return False
 
-#Main function for scraping streets
-def scrapy_street(url,city,args):
+#Main function for scraping locations in the city, different from scrapy_street in TripAdvisor
+def scrapy_loc(url,city,args):
     driver.execute_script("window.open('');")
     driver.switch_to.window(driver.window_handles[1])
     driver.get(url)
+    sleep(5)
     try:
         total_reviews = int(driver.find_element(By.XPATH, './/div[@class="Ci"]').text.split()[-1].replace(',', ''))
     except:
@@ -245,17 +349,27 @@ def scrapy_street(url,city,args):
                 # if check_review2(driver): #or check_review1(driver)
                 response = BeautifulSoup(driver.page_source, 'html.parser')
                 sleep(2)
-                street_parser(response, city, args, i)
+                loc_parser(response, city, args, i)
                 sleep(6)
+            log_found(city, args)
+            Scrolling = False
+            break
+
         except:
             Scrolling = False
             break
     driver.close()
     driver.switch_to.window(driver.window_handles[0])
 
+def review_box(review):
+    try:
+        review.find('div', class_="XfVdV o AIbhI").text
+        return True
+    except:
+        return False
 
 
-def street_parser(response,city,args,i):
+def loc_parser(response,city,args,i):
     #Parsing reviews on single page
     try:
         reviews_boxes = response.find_all("section", class_="jemSU")
@@ -263,32 +377,88 @@ def street_parser(response,city,args,i):
         reviews_boxes = None
         print('Cannot locate review boxes for street {}'.format(city))
     if reviews_boxes:
-        for num, review in enumerate(reviews_boxes[1:]):
-            print('Parsing review No.{} on page {} for street {}'.format(num,i,city))
-            data = {}
-            # review = reviews_boxes[1]
-            data['loc'] = re.sub(re.compile(r'\d+\.'),'',review.find('span',attrs={'name':'title'}).text).strip() if review.find('span',attrs={'name':'title'}).text else None
-            data['url'] = review.find('div',class_="NxKBB").find('a')['href'] if review.find('div',class_="NxKBB").find('a') else None
+        for num, review in enumerate(reviews_boxes):
+            if num != 0:
+                if review_box(review)==True:
+                    # review.find('div',class_="XfVdV o AIbhI").text
+                    print('Parsing location information No.{} on page {} for street {}'.format(num, i, city))
+                    data = {}
+                    # review = reviews_boxes[1]
+                    data['loc'] = re.sub(re.compile(r'\d+\.'), '',
+                                         review.find('div', class_="XfVdV o AIbhI").text).strip() if review.find('div',
+                                                                                                                 class_="XfVdV o AIbhI").text else None
+                    data['url'] = review.find('div', class_="NxKBB").find('a')['href'] if review.find('div',
+                                                                                                      class_="NxKBB").find(
+                        'a') else None
 
-            data['review_rating'] = review.find('span', class_="biGQs _P pZUbB osNWb").text if review.find('span', class_="biGQs _P pZUbB osNWb").text else None
+                    data['reviews_num'] = review.find('span', class_="biGQs _P pZUbB osNWb").text if review.find('span',
+                                                                                                                 class_="biGQs _P pZUbB osNWb").text else None
 
-            df = pd.DataFrame(dict([(k,pd.Series(v)) for k,v in data.items()]))
-            df['city'] = city
+                    df = pd.DataFrame(dict([(k, pd.Series(v)) for k, v in data.items()]))
+                    df['city'] = city
 
-            # review_df =pd.concat([review_df, df])
-            if os.path.isdir(args.save_path_links) == False:
-                os.makedirs(args.save_path_links)
-            file_name = data['loc'].replace(' ', '_')
-            file_name = file_name+'_{}'.format(city)
-            if os.path.isfile(args.save_path_links + '/{}.csv'.format(file_name)) == False:
-                df.to_csv(args.save_path_links + '/{}.csv'.format(file_name))
-            else:
-                existing = pd.read_csv(args.save_path_links + '/{}.csv'.format(file_name))
-                existing = existing[df.columns.to_list()]
-                if df.review_id.iloc[0] not in list(existing.review_id.unique()):
-                    df.to_csv(args.save_path_links + '/{}.csv'.format(file_name),header=False,mode='a')
+                    if os.path.isdir(args.save_path) == False:
+                        os.makedirs(args.save_path)
+
+                    if os.path.isfile(args.save_path_links) == False:
+                        df.to_csv(args.save_path_links)
+                    else:
+                        existing = pd.read_csv(args.save_path_links)
+                        existing = existing[df.columns.to_list()]
+                        if df.url.iloc[0] not in list(existing.url.unique()):
+                            df.to_csv(args.save_path_links, header=False, mode='a')
+                else:
+                    pass
+
+
     else:
         print('Failed to get reviews on page {}'.format(i))
 
+
+
+def review_parser(response, loc, args, i, total_reviews,local_name, city):
+    #Parsing reviews on single page
+
+    try:
+        reviews_boxes = response.find("div", class_="LbPSX").find_all('div', class_="C") if response.find("div", class_="LbPSX") else None
+        #response.find_all('div', class_='YibKl MC R2 Gi z Z BB pBbQr')
+    except:
+        reviews_boxes = None
+        print('Cannot locate review boxes for location {}'.format(loc))
+    if reviews_boxes:
+        # reviews_boxes = reviews_boxes.find_all('div', class_="C")
+
+        for num, review in enumerate(reviews_boxes):
+            print('Parsing review No.{} on page {} for street {}'.format(num,i,loc))
+            data = {}
+            # review = reviews_boxes[1]
+            data['user_id'] = review.find('span', class_ = 'biGQs _P fiohW fOtGX').text if review.find('span', class_ = 'biGQs _P fiohW fOtGX') else None
+            data['user_loc'] = review.find('div', class_ = 'biGQs _P pZUbB osNWb').text if review.find('div', class_ = 'biGQs _P pZUbB osNWb') else None
+            data['review_id'] = review.find('div', class_ = '_c').select_one("div:nth-of-type(3)").find('a')['href'].replace('/ShowUserReviews-','') if review.find('div', class_ = '_c').select_one("div:nth-of-type(3)") else None
+            data['review_title'] = review.find('div', class_ = 'biGQs _P fiohW qWPrE ncFvv fOtGX').find('span', class_ = 'yCeTE').text if review.find('div', class_ = 'biGQs _P fiohW qWPrE ncFvv fOtGX').find('span', class_ = 'yCeTE') else None
+            data['review_date'] = review.find('div', class_ = 'TreSq').find('div').text.replace('Written ','') if review.find('div', class_ = 'TreSq').find('div') else None
+            data['review_text'] = review.find('div',class_= 'biGQs _P pZUbB KxBGd').find('span',class_='yCeTE').text if review.find('div',class_= 'biGQs _P pZUbB KxBGd').find('span',class_='yCeTE') else None
+            pictures = review.find('div', class_= 'LblVz _e q').find_all('picture',class_='NhWcC _R mdkdE') if review.find('div', class_= 'LblVz _e q') else None
+            data['picture_url'] = ','.join([pic.find('img')['src'] for pic in pictures]) if pictures else None
+            data['review_rating'] = review.find('svg', attrs={"aria-label": True})['aria-label'][:3]
+            data['loc'] = loc if loc else None
+            data['local_name'] = local_name
+            data['city'] = city
+            df = pd.DataFrame(dict([(k,pd.Series(v)) for k,v in data.items()]))
+            df['total_reviews'] = total_reviews
+
+            # review_df =pd.concat([review_df, df])
+            if os.path.isdir(args.save_path) == False:
+                os.makedirs(args.save_path)
+            file_name = loc.replace(' ', '_')
+            if os.path.isfile(args.save_path + '/{}.csv'.format(file_name)) == False:
+                df.to_csv(args.save_path + '/{}.csv'.format(file_name))
+            else:
+                existing = pd.read_csv(args.save_path + '/{}.csv'.format(file_name))
+                existing = existing[df.columns.to_list()]
+                if df.review_id.iloc[0] not in list(existing.review_id.unique()):
+                    df.to_csv(args.save_path + '/{}.csv'.format(file_name),header=False,mode='a')
+    else:
+        print('Failed to get reviews on page {}'.format(i))
 if __name__ =='__main__':
     main()
