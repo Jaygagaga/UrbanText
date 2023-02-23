@@ -230,6 +230,13 @@ def scrapy_street(num,street, args):
                     total_reviews = int(driver.find_element(By.XPATH, './/span[@class="qqniT"]').text.split()[0].replace(',', ''))
                 except:
                     total_reviews = None
+            if not total_reviews:
+                try:
+                    total_reviews = int(
+                        driver.find_element(By.XPATH, './/span[@class="yyzcQ"]').text.split()[0].replace(',', ''))
+                except:
+                    total_reviews = None
+
             review.click() #Go to the review section of the page
             sleep(4)
         except NoSuchElementException:
@@ -317,8 +324,8 @@ def review_parser(response,street,args,i,total_reviews):
             pictures = review.find('div', class_= 'LblVz _e q').find_all('picture',class_='NhWcC _R mdkdE') if review.find('div', class_= 'LblVz _e q') else None
             data['picture_url'] = ','.join([pic.find('img')['src'] for pic in pictures]) if pictures else None
             data['review_rating'] = review.find('svg', attrs={"aria-label": True})['aria-label'][:3]
-            data['street'] = street
-            data['city'] = args.city
+            data['street'] = street if street else None
+            data['city'] = args.city if args.city else None
             data['local_name'] = local_name
             df = pd.DataFrame(dict([(k,pd.Series(v)) for k,v in data.items()]))
             df['total_reviews'] = total_reviews
