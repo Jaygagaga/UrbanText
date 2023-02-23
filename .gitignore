@@ -5,3 +5,4 @@ Data/OSM_streets.Rmd
 Data/processing_data.py
 Data/Reviews/GoogleMap/
 Data/Reviews/TripAdvisor/
+Data/Reviews/London_TA/

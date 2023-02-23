@@ -1,3 +1,5 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
 #Setting up selenium webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
@@ -267,7 +269,8 @@ def scrapy_street(num,street, args):
                         if count >=3:
                             Scrolling = False
                             break
-
+                Scrolling = False
+                break
 
                 # print('Finished scraping %s' % street)
                 # driver.close()
