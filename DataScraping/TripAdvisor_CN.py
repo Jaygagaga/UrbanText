@@ -334,10 +334,10 @@ def scrapy_loc(url,city,args):
             # Capture "Read more" buttons and click each of them to expand reviews
             expand_read_more()
             #Looping through pages and parse the content
-            for i in range(1, math.ceil(total_reviews/10)+1): #
+            for i in range(1, math.ceil(total_reviews/30)+1): #
                 print('Go to page {}'.format(i))
                 if i >=2:
-                    next_page =current_url.split('-oa')[0]+'-oa{}-'.format(i*10+10)+current_url.split('-oa')[-1].split('-')[-1]
+                    next_page =current_url.split('-oa')[0]+'-oa{}-'.format((i-1)*30)+current_url.split('-oa')[-1].split('-')[-1]
                     try:
                         driver.get(next_page)
                         sleep(7)
