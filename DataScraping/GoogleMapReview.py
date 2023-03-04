@@ -386,7 +386,7 @@ def main():
         os.makedirs(args.save_path)
     exsiting_streets = []
     if args.option == 'street_urls':
-        print(args.street_url)
+        print(args.option)
         #if run before, open logged street records and remove them
         if os.path.exists(log_street_link_file)==True:
             with open(log_street_link_file) as f:
