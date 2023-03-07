@@ -6,3 +6,5 @@ Data/processing_data.py
 Data/Reviews/GoogleMap/
 Data/Reviews/TripAdvisor/
 Data/Reviews/London_TA/
+Data/Reviews/GoogleMap/street_link_file_GoogleMap.txt
+Data/Reviews/GoogleMap/unfound_streets_reviews_GoogleMap.txt

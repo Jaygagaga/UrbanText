@@ -161,6 +161,7 @@ def main():
     #         scrapy_street(num, street, args)
     #         sleep(8)
     for num, street in enumerate(streets_toscrape):
+
         scrapy_street(num, street, args)
         sleep(8)
 
@@ -181,12 +182,12 @@ def expand_read_more():
         except:
             pass
 def check_review1(driver):
-    if driver.find_elements(By.XPATH, './/div[@class="YibKl MC R2 Gi z Z BB pBbQr"]'):
+    if driver.find_element(By.XPATH, './/span[@class="biGQs _P pZUbB KxBGd"]'):
         return True
     else:
         return False
 def check_review2(driver):
-    if driver.find_elements(By.XPATH, './/div[@class="LbPSX"]'):
+    if driver.find_element(By.XPATH, './/div[@class="LbPSX"]'):
         return True
     else:
         return False
@@ -254,9 +255,11 @@ def scrapy_street(num,street, args):
                 expand_read_more()
                 #Looping through pages and parse the content
                 for i in range(1, math.ceil(total_reviews/10)+1): #
-                    print(i)
+                    print('{} of {}'.format(i, math.ceil(total_reviews/10)+1))
                     if i >=2:
-                        next_page =current_url.split('Reviews-')[0]+ 'Reviews'+'-or{}-'.format(i*10-10)+current_url.split('Reviews-')[1]
+                        if i >= 5:
+                            print('stop')
+                        next_page =current_url.split('Reviews-')[0]+ 'ReEviews'+'-or{}-'.format(i*10-10)+current_url.split('Reviews-')[1]
                         try:
                             driver.get(next_page)
                             sleep(5)
@@ -264,7 +267,6 @@ def scrapy_street(num,street, args):
                             sleep(5)
                         except NoSuchElementException:
                             print('Cannot locate next page')
-                            pass
                     if check_review2(driver): #or check_review1(driver)
                         response = BeautifulSoup(driver.page_source, 'html.parser')
                         sleep(2)
@@ -273,11 +275,14 @@ def scrapy_street(num,street, args):
                     else:
                         print("No reviews anymore.")
                         count += 1
+                        i = i-1
                         if count >=3:
                             Scrolling = False
                             break
                 Scrolling = False
+                log_found(street, args)
                 break
+
 
                 # print('Finished scraping %s' % street)
                 # driver.close()
@@ -285,7 +290,7 @@ def scrapy_street(num,street, args):
             except:
                 Scrolling = False
                 break
-        log_found(street,args)
+
     else:
         print('No reviews for No.{} street {}.'.format(num, street))
         log_unfound(street,args)
