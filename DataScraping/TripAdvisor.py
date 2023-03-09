@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 #Setting up selenium webdriver
+import re
+
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
@@ -32,6 +34,18 @@ MAX_WAIT = 20
 import argparse
 import math
 import os
+
+def concat(csv_files):
+    all_ = pd.DataFrame()
+    for i in range(len(csv_files)):
+        try:
+            df = pd.read_csv(csv_files[i],encoding="utf-8")
+            # df['keyword'] = csv_files[i].split('/')[-1].split('.')[0].split('_')[-1]
+            all_ = all_.append(df)
+        except:
+            continue
+    return all_
+
 def log_found(street,args):
     # global log_street_link_file
     if os.path.isdir('/'.join(args.found_path.split('/')[:-1])) == False:
@@ -143,26 +157,35 @@ def main():
         founded_streets = [line.split('\n')[0] for line in lines]
         founded_streets = list(set(founded_streets))
         streets_toscrape = [street for street in streets_toscrape if street not in founded_streets]
-    print('Need to scrape data for {} streets'.format(len(streets_toscrape)))
-    driver.get('https://www.tripadvisor.com.sg/')
-    # print('Getting streets that have been scraped...')
-    # csv_files = glob.glob(args.save_path+'/*.csv')
-    # if len(csv_files) != 0:
-    #     all_df = concat(csv_files)
-    #     print('Dataframe columns of scraped files:', all_df.columns)
-    #     # scraped_streets = list(all_df.street.unique())
-    #     for num, street in enumerate(streets_toscrape):
-    #         last_page = all_df[all_df.street == street].page.iloc[-1]
-    #         if last_page != all_df[all_df.street == street].final_page.iloc[-1]:
-    #             scrapy_street(num, street, args)
-    #     # streets_toscrape = [street for street in streets if street not in scraped_streets]
-    # else:
-    #     for num, street in enumerate(streets_toscrape):
-    #         scrapy_street(num, street, args)
-    #         sleep(8)
-    for num, street in enumerate(streets_toscrape):
+    # """Checking if we have a considerate number of reviews for each streets, if not, put it into street_toscrape"""
+    # if os.path.isdir(args.save_path) == True:
+    #     csv_files = glob.glob(args.save_path + '/*.csv')
+    #     # all_df = concat(csv_files)
 
-        scrapy_street(num, street, args)
+    print('Need to scrape data for {} streets'.format(len(streets_toscrape)))
+
+    driver.get('https://www.tripadvisor.com.sg/')
+
+    for num, street in enumerate(streets_toscrape):
+        if os.path.exists(os.path.join(args.save_path, "{}.csv".format('_'.join(street.split())))) == True:
+            review_df = pd.read_csv(os.path.join(args.save_path, "{}.csv".format('_'.join(street.split()))))
+            total_reviews = review_df.total_reviews.iloc[-1]
+            if 'current_page' in review_df.columns:
+                last_page = review_df.current_page.iloc[-1]
+                page_number = review_df.page.iloc[-1]
+            else:
+                review_number = len(review_df)
+                url_root = review_df.review_id.iloc[1]
+                current_page = 'https://www.tripadvisor.com.sg/Attraction_Review-'+'-'.join(url_root.split('-')[:2] + ['Reviews-or{}'.format(review_number)] +url_root.split('-')[3:])
+                page_number= review_number/10 - 1
+                review_df['current_page'] = None
+                review_df['page_number'] = None
+
+        else:
+            total_reviews = None
+            current_page = None
+            page_number = None
+        scrapy_street(num, street, args,current_page=current_page,total_reviews=total_reviews,page_number=page_number)
         sleep(8)
 
 
@@ -193,73 +216,26 @@ def check_review2(driver):
         return False
 
 #Main function for scraping streets
-def scrapy_street(num,street, args):
+def scrapy_street(num,street, args,current_page=None, total_reviews=None,page_number=None):
     print('Scraping for No.{} street {}'.format(num,street))
     driver.execute_script("window.open('');")
     driver.switch_to.window(driver.window_handles[1])
     driver.get('https://www.tripadvisor.com.sg/')
-
-    wait = WebDriverWait(driver, MAX_WAIT)
-    sleep(8)
-    try:
-        # search = wait.until(EC.element_to_be_clickable((By.XPATH, './/span[@class="QLiHN o W"]')))
-        # search.click()
-        box = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="lithium-root"]/main/div[3]/div/div/div/form/input[1]')))
-    except TimeoutException:
-        print('Cannot locate search box')
-    sleep(3)
-    street_name = street+', '+args.city
-    box.send_keys(street_name)
-    sleep(4)
-    # search.send_keys(Keys.RETURN)
-    # sleep(3)
-    #Clicking the first matched result
-    driver.find_element(By.XPATH, './/div[@id="typeahead_results"]/a[@class="GzJDZ w z _S _F Wc Wh Q B- _G"]').click()
-    sleep(5)
-
-    # Going to review section
-    headlines = ['Restaurant','Hotel','Flight','VacationRentals']
-    if not any(ext in driver.current_url for ext in headlines):
-        try:
-            review = driver.find_element(By.XPATH, './/a[contains(@href, "#REVIEWS")]')
-            try:
-                total_reviews = int(driver.find_element(By.XPATH,'.//div[@class="Ci"]').text.split()[-1].replace(',', ''))
-            except:
-                total_reviews = None
-            if not total_reviews:
-                try:
-                    total_reviews = int(driver.find_element(By.XPATH, './/span[@class="qqniT"]').text.split()[0].replace(',', ''))
-                except:
-                    total_reviews = None
-            if not total_reviews:
-                try:
-                    total_reviews = int(
-                        driver.find_element(By.XPATH, './/span[@class="yyzcQ"]').text.split()[0].replace(',', ''))
-                except:
-                    total_reviews = None
-
-            review.click() #Go to the review section of the page
-            sleep(4)
-        except NoSuchElementException:
-            print('Cannot locate review sections') #class="Jktgk Mc"
-            log_unfound(street,args)
-            pass
-
-        # Capture current page url
-        current_url = driver.current_url
-        count = 0
+    if current_page != None:
+        driver.get(current_page)
+        sleep(5)
+        count=0
         Scrolling = True
         while Scrolling:
             try:
                 # Capture "Read more" buttons and click each of them to expand reviews
                 expand_read_more()
-                #Looping through pages and parse the content
-                for i in range(1, math.ceil(total_reviews/10)+1): #
-                    print('{} of {}'.format(i, math.ceil(total_reviews/10)+1))
-                    if i >=2:
-                        if i >= 5:
-                            print('stop')
-                        next_page =current_url.split('Reviews-')[0]+ 'ReEviews'+'-or{}-'.format(i*10-10)+current_url.split('Reviews-')[1]
+                # Looping through pages and parse the content
+                for i in range(int(page)+3, math.ceil(total_reviews / 10) + 1):  #
+                    print('{} of {}'.format(i, math.ceil(total_reviews / 10)))
+                    if i >= page+1:
+                        next_page = current_page.split('Reviews-')[0] + 'ReEviews' + '-or{}-'.format(i * 10 - 10) + \
+                                    current_page.split('Reviews-')[1]
                         try:
                             driver.get(next_page)
                             sleep(5)
@@ -267,22 +243,27 @@ def scrapy_street(num,street, args):
                             sleep(5)
                         except NoSuchElementException:
                             print('Cannot locate next page')
-                    if check_review2(driver): #or check_review1(driver)
+                    sleep(10)
+                    if check_review2(driver):  # or check_review1(driver)
                         response = BeautifulSoup(driver.page_source, 'html.parser')
                         sleep(2)
-                        review_parser(response, street,args,i, total_reviews)
+                        if i == 1:
+                            current_page = driver.current_url
+                        else:
+                            current_page = next_page
+                        review_parser(response, street, args, i, total_reviews, current_page)
                         sleep(6)
                     else:
                         print("No reviews anymore.")
                         count += 1
-                        i = i-1
-                        if count >=3:
+                        i = i - 1
+                        if count >= 3:
                             Scrolling = False
                             break
                 Scrolling = False
                 log_found(street, args)
+                print("Finishing scraping all pages")
                 break
-
 
                 # print('Finished scraping %s' % street)
                 # driver.close()
@@ -290,17 +271,117 @@ def scrapy_street(num,street, args):
             except:
                 Scrolling = False
                 break
+        driver.close()
+        driver.switch_to.window(driver.window_handles[0])
+
 
     else:
-        print('No reviews for No.{} street {}.'.format(num, street))
-        log_unfound(street,args)
-    driver.close()
-    driver.switch_to.window(driver.window_handles[0])
+        wait = WebDriverWait(driver, MAX_WAIT)
+        sleep(8)
+        try:
+            # search = wait.until(EC.element_to_be_clickable((By.XPATH, './/span[@class="QLiHN o W"]')))
+            # search.click()
+            box = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="lithium-root"]/main/div[3]/div/div/div/form/input[1]')))
+        except TimeoutException:
+            print('Cannot locate search box')
+        sleep(3)
+        street_name = street+', '+args.city
+        box.send_keys(street_name)
+        sleep(4)
+        # search.send_keys(Keys.RETURN)
+        # sleep(3)
+        #Clicking the first matched result
+        driver.find_element(By.XPATH, './/div[@id="typeahead_results"]/a[@class="GzJDZ w z _S _F Wc Wh Q B- _G"]').click()
+        sleep(5)
+
+        # Going to review section
+        headlines = ['Restaurant','Hotel','Flight','VacationRentals']
+        if not any(ext in driver.current_url for ext in headlines):
+            try:
+                review = driver.find_element(By.XPATH, './/a[contains(@href, "#REVIEWS")]')
+                try:
+                    total_reviews = int(driver.find_element(By.XPATH,'.//div[@class="Ci"]').text.split()[-1].replace(',', ''))
+                except:
+                    total_reviews = None
+                if not total_reviews:
+                    try:
+                        total_reviews = int(driver.find_element(By.XPATH, './/span[@class="qqniT"]').text.split()[0].replace(',', ''))
+                    except:
+                        total_reviews = None
+                if not total_reviews:
+                    try:
+                        total_reviews = int(
+                            driver.find_element(By.XPATH, './/span[@class="yyzcQ"]').text.split()[0].replace(',', ''))
+                    except:
+                        total_reviews = None
+
+                review.click() #Go to the review section of the page
+                sleep(4)
+            except NoSuchElementException:
+                print('Cannot locate review sections') #class="Jktgk Mc"
+                log_unfound(street,args)
+                pass
+
+            # Capture current page url
+            current_url = driver.current_url
+            count = 0
+            Scrolling = True
+            while Scrolling:
+                try:
+                    # Capture "Read more" buttons and click each of them to expand reviews
+                    expand_read_more()
+                    #Looping through pages and parse the content
+                    for i in range(1, math.ceil(total_reviews/10)+1): #
+                        print('{} of {}'.format(i, math.ceil(total_reviews/10)))
+                        if i >=2:
+                            next_page =current_url.split('Reviews-')[0]+ 'ReEviews'+'-or{}-'.format(i*10-10)+current_url.split('Reviews-')[1]
+                            try:
+                                driver.get(next_page)
+                                sleep(5)
+                                expand_read_more()
+                                sleep(5)
+                            except NoSuchElementException:
+                                print('Cannot locate next page')
+                        sleep(6)
+                        if check_review2(driver): #or check_review1(driver)
+                            response = BeautifulSoup(driver.page_source, 'html.parser')
+                            sleep(2)
+                            if i ==1:
+                                current_page = driver.current_url
+                            else:
+                                current_page = next_page
+                            review_parser(response, street,args,i, total_reviews,current_page)
+                            sleep(6)
+                        else:
+                            print("No reviews anymore.")
+                            count += 1
+                            i = i-1
+                            if count >=3:
+                                Scrolling = False
+                                break
+                    Scrolling = False
+                    log_found(street, args)
+                    print("Finishing scraping all pages")
+                    break
+
+
+                    # print('Finished scraping %s' % street)
+                    # driver.close()
+                    # driver.switch_to.window(driver.window_handles[0])
+                except:
+                    Scrolling = False
+                    break
+
+        else:
+            print('No reviews for No.{} street {}.'.format(num, street))
+            log_unfound(street,args)
+        driver.close()
+        driver.switch_to.window(driver.window_handles[0])
 
 
 
 
-def review_parser(response,street,args,i,total_reviews):
+def review_parser(response,street,args,i,total_reviews,current_page):
     #Parsing reviews on single page
     try:
         local_name = response.find('h1',class_ = 'QdLfr b d Pn').text if response.find('h1',class_ = 'QdLfr b d Pn') else response.find('h1',class_="biGQs _P fiohW eIegw").text
@@ -334,6 +415,10 @@ def review_parser(response,street,args,i,total_reviews):
             data['local_name'] = local_name
             df = pd.DataFrame(dict([(k,pd.Series(v)) for k,v in data.items()]))
             df['total_reviews'] = total_reviews
+            df['current_page']  = current_page
+            # df['page_number'] = re.findall(r"-or(\d+)-", current_page)[0]
+            df['page_number'] = i
+            print(i, re.findall(r"-or(\d+)-", current_page)[0])
 
             # review_df =pd.concat([review_df, df])
             if os.path.isdir(args.save_path) == False:
@@ -344,6 +429,9 @@ def review_parser(response,street,args,i,total_reviews):
             else:
                 existing = pd.read_csv(args.save_path + '/{}.csv'.format(file_name))
                 existing = existing[df.columns.to_list()]
+                if 'current_page' not in existing.columns:
+                    existing['current_page'] = None
+                    existing['page_number'] = None
                 if df.review_id.iloc[0] not in list(existing.review_id.unique()):
                     df.to_csv(args.save_path + '/{}.csv'.format(file_name),header=False,mode='a')
     else:
