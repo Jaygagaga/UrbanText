@@ -286,7 +286,7 @@ def scrapy_street(num,street, args,current_page=None, total_reviews=None,page_nu
 
 
     else:
-        print('Scraping review for {} the first time'.format(loc))
+        print('Scraping review for {} the first time'.format(street))
         wait = WebDriverWait(driver, MAX_WAIT)
         sleep(8)
         try:
