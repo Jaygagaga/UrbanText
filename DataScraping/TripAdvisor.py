@@ -171,8 +171,9 @@ def main():
             review_df = pd.read_csv(os.path.join(args.save_path, "{}.csv".format('_'.join(street.split()))))
             total_reviews = review_df.total_reviews.iloc[-1]
             if 'current_page' in review_df.columns:
-                last_page = review_df.current_page.iloc[-1]
-                page_number = review_df.page.iloc[-1]
+                current_page = review_df.current_page.iloc[-1]
+                page_number = review_df.page_number.iloc[-1]
+
             else:
                 review_number = len(review_df)
                 url_root = review_df.review_id.iloc[1]
@@ -222,7 +223,9 @@ def scrapy_street(num,street, args,current_page=None, total_reviews=None,page_nu
     driver.switch_to.window(driver.window_handles[1])
     driver.get('https://www.tripadvisor.com.sg/')
     if current_page != None:
+        print('Picking up scraping reviews for {} from exisiting review dataset'.format(street))
         driver.get(current_page)
+
         sleep(5)
         count=0
         Scrolling = True
@@ -231,10 +234,17 @@ def scrapy_street(num,street, args,current_page=None, total_reviews=None,page_nu
                 # Capture "Read more" buttons and click each of them to expand reviews
                 expand_read_more()
                 # Looping through pages and parse the content
-                for i in range(int(page)+3, math.ceil(total_reviews / 10) + 1):  #
+                if page_number != 1:
+                    start = int(page_number)+2
+                else:
+                    start = 1
+                for i in range(start, math.ceil(total_reviews / 10) + 1):  #
                     print('{} of {}'.format(i, math.ceil(total_reviews / 10)))
-                    if i >= page+1:
-                        next_page = current_page.split('Reviews-')[0] + 'ReEviews' + '-or{}-'.format(i * 10 - 10) + \
+                    if i >= page_number+1:
+                        driver.get(current_page)
+                        sleep(5)
+                        current_page = driver.current_url
+                        next_page = current_page.split('Reviews-')[0] + 'Reviews' + '-or{}-'.format(i * 10 - 10) + \
                                     current_page.split('Reviews-')[1]
                         try:
                             driver.get(next_page)
@@ -276,6 +286,7 @@ def scrapy_street(num,street, args,current_page=None, total_reviews=None,page_nu
 
 
     else:
+        print('Scraping review for {} the first time'.format(loc))
         wait = WebDriverWait(driver, MAX_WAIT)
         sleep(8)
         try:
@@ -334,7 +345,10 @@ def scrapy_street(num,street, args,current_page=None, total_reviews=None,page_nu
                     for i in range(1, math.ceil(total_reviews/10)+1): #
                         print('{} of {}'.format(i, math.ceil(total_reviews/10)))
                         if i >=2:
-                            next_page =current_url.split('Reviews-')[0]+ 'ReEviews'+'-or{}-'.format(i*10-10)+current_url.split('Reviews-')[1]
+                            # driver.get(current_url)
+                            # sleep(5)
+                            # current_url = driver.current_url
+                            next_page =current_url.split('Reviews-')[0]+ 'Reviews'+'-or{}-'.format(i*10-10)+current_url.split('Reviews-')[1]
                             try:
                                 driver.get(next_page)
                                 sleep(5)
@@ -418,7 +432,6 @@ def review_parser(response,street,args,i,total_reviews,current_page):
             df['current_page']  = current_page
             # df['page_number'] = re.findall(r"-or(\d+)-", current_page)[0]
             df['page_number'] = i
-            print(i, re.findall(r"-or(\d+)-", current_page)[0])
 
             # review_df =pd.concat([review_df, df])
             if os.path.isdir(args.save_path) == False:
