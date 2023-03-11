@@ -280,7 +280,9 @@ def scrapy_street(num,street, args,current_page=None, total_reviews=None,page_nu
                 # driver.switch_to.window(driver.window_handles[0])
             except:
                 Scrolling = False
+                log_unfound(street, args)
                 break
+
         driver.close()
         driver.switch_to.window(driver.window_handles[0])
 
@@ -373,6 +375,8 @@ def scrapy_street(num,street, args,current_page=None, total_reviews=None,page_nu
                             if count >=3:
                                 Scrolling = False
                                 break
+                    if i ==1:
+                        log_unfound(street, args)
                     Scrolling = False
                     log_found(street, args)
                     print("Finishing scraping all pages")
