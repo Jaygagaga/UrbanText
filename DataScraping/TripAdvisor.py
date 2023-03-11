@@ -253,7 +253,7 @@ def scrapy_street(num,street, args,current_page=None, total_reviews=None,page_nu
                             sleep(5)
                         except NoSuchElementException:
                             print('Cannot locate next page')
-                    sleep(10)
+                    sleep(7)
                     if check_review2(driver):  # or check_review1(driver)
                         response = BeautifulSoup(driver.page_source, 'html.parser')
                         sleep(2)
@@ -445,10 +445,10 @@ def review_parser(response,street,args,i,total_reviews,current_page):
                 df.to_csv(args.save_path + '/{}.csv'.format(file_name))
             else:
                 existing = pd.read_csv(args.save_path + '/{}.csv'.format(file_name))
-                existing = existing[df.columns.to_list()]
                 if 'current_page' not in existing.columns:
                     existing['current_page'] = None
                     existing['page_number'] = None
+                existing = existing[df.columns.to_list()]
                 if df.review_id.iloc[0] not in list(existing.review_id.unique()):
                     df.to_csv(args.save_path + '/{}.csv'.format(file_name),header=False,mode='a')
     else:
