@@ -275,6 +275,8 @@ def scrapy_street(num,street, args,current_page=None, total_reviews=None,page_nu
                 print("Finishing scraping all pages")
                 break
 
+
+
                 # print('Finished scraping %s' % street)
                 # driver.close()
                 # driver.switch_to.window(driver.window_handles[0])
@@ -370,13 +372,14 @@ def scrapy_street(num,street, args,current_page=None, total_reviews=None,page_nu
                             sleep(6)
                         else:
                             print("No reviews anymore.")
+                            if i == 1:
+                                log_unfound(street, args)
                             count += 1
                             i = i-1
                             if count >=3:
                                 Scrolling = False
                                 break
-                    if i ==1:
-                        log_unfound(street, args)
+
                     Scrolling = False
                     log_found(street, args)
                     print("Finishing scraping all pages")
@@ -388,6 +391,7 @@ def scrapy_street(num,street, args,current_page=None, total_reviews=None,page_nu
                     # driver.switch_to.window(driver.window_handles[0])
                 except:
                     Scrolling = False
+                    log_unfound(street, args)
                     break
 
         else:
@@ -445,6 +449,7 @@ def review_parser(response,street,args,i,total_reviews,current_page):
                 df.to_csv(args.save_path + '/{}.csv'.format(file_name))
             else:
                 existing = pd.read_csv(args.save_path + '/{}.csv'.format(file_name))
+
                 if 'current_page' not in existing.columns:
                     existing['current_page'] = None
                     existing['page_number'] = None
