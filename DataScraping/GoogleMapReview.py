@@ -432,7 +432,7 @@ def review_parser(response,street,args,total_reviews,total_rating,category,local
             if df.review_id.iloc[0] not in list(existing.review_id.unique()):
                 df.to_csv(args.save_path + '/{}.csv'.format(file_name), header=False, mode='a')
 def main():
-    os.chdir('/Users/lijingyi/UrbanText')
+    os.chdir('/Users/jie/UrbanText')
     print('Current root directory: ', os.getcwd())
     args = parse_arguments()
     streets_df = pd.read_csv(args.file_path)
