@@ -250,12 +250,14 @@ def scrapy(url,street,args,driver,page_number=None):
     sleep(3)
     driver.get(url)
     sleep(4)
+    Scrolling = True
     wait = WebDriverWait(driver, MAX_WAIT)
     try:
         review_info = driver.find_element(By.XPATH, './/div[@class="lMbq3e"]').text
     except:
         review_info = None
         print('Cannot locate street headlines')
+        Scrolling=False
     # try:
     #     local_name = driver.find_element(By.XPATH, '//h1[class="DUwDvf fontHeadlineLarge"]').text
     # except:
@@ -270,6 +272,14 @@ def scrapy(url,street,args,driver,page_number=None):
         total_rating = review_info.split('\n')[1]
         total_reviews = review_info.split('\n')[2].split(' review')[0]
         category =  review_info.split('\n')[3]
+    if review_info and len(review_info.split('\n')) == 5:
+        local_name = review_info.split('\n')[0]
+        total_rating = review_info.split('\n')[2]
+        try:
+            total_reviews = int(re.findall(r'\d+', review_info.split('\n')[3])[0])
+        except:
+            total_reviews = review_info.split('\n')[3]
+        category = review_info.split('\n')[4]
 
 
     # total_reviews = int(driver.find_element(By.XPATH,'.//div[@class="skqShb"]').text.split('\n')[1].split(' reviews')[0].replace(',','')) \
@@ -318,7 +328,7 @@ def scrapy(url,street,args,driver,page_number=None):
     # review_parser(response, street, args,total_reviews,total_rating,category,local_name,)
     # Scrolling to get new boxes
     count =0
-    Scrolling = True
+
     page=0
     if page_number != None:
         print('Picking up scraping reviews from existing dataset{}'.format(street))
