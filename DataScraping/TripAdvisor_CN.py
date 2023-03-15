@@ -287,6 +287,7 @@ def main():
                             #
                     except:
                         Scrolling = False
+                        log_unfound(loc, args)
                         break
                 driver.close()
                 driver.switch_to.window(driver.window_handles[0])
