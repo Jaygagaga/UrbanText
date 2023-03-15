@@ -283,6 +283,7 @@ def scrapy_street(num,street, args,current_page=None, total_reviews=None,page_nu
             except:
                 Scrolling = False
                 log_unfound(street, args)
+                print('No reviews')
                 break
 
         driver.close()
