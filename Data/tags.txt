@@ -1,25 +1,51 @@
-SPATIAL_building
-SPATIAL_publicspace
-SPATIAL_nature
-SPATIAL_transport
-SPATIAL_concept
-SENSORY_SMELL_emissions
-SENSORY_SMELL_industry
-SENSORY_SMELL_foodbeverages
-SENSORY_SMELL_tobaccosmoke
-SENSORY_SMELL_cleaning
-SENSORY_SMELL_synthetic
-SENSORY_SMELL_waste
-SENSORY_SMELL_animals
-SENSORY_SMELL_nature
-ACTIVITY
-FACILITY
-EXOTIC
-TIME
-METAPHOR
-PERSON
-WEATHER
-POSITION
-GPE
-RESPONSE
+SPATIAL_building: Keywords or phrases relating to building,e.g. this builiding, this building's decoration,.
+SPATIAL_publicspace: Keywords or phrases relating to public space, e.g. this street, this park.NOT named streets, parks.
+SPATIAL_nature: Keywords or phrases relating to nature, such as flowers, grass.
+SPATIAL_transport: Keywords or phrases relating to transport, such as MRT, bus station.
+SPATIAL_concept: Keywords or phrases relating to concepts in built environment field or general terms describing the spatial, such as environment.
+POI_G: General POI names such as Western bar.
+POI_S: Specific POI names, buildings, airports, highways, bridges, names of places, pubs, resturants, etc, such as Starbucks, Bishan Park.
+GPE: Countries, cities, states.
+SENSORY_PERCEPTION: General concepts or items used to express feelings or emotions such as atmosphere, vibe, experience
+SENSORY_SMELL_emissions: Keywords or phrases relating to emission smell.
+SENSORY_SMELL_industry: Keywords or phrases relating to industry smell.
+SENSORY_SMELL_foodbeverages: Keywords or phrases relating to food and beverages smell.
+SENSORY_SMELL_tobaccosmoke: Keywords or phrases relating to tobaccosmoke smell.
+SENSORY_SMELL_cleaning: Keywords or phrases relating to cleaning smell.
+SENSORY_SMELL_synthetic: Keywords or phrases relating to synthetic smell.
+SENSORY_SMELL_waste: Keywords or phrases relating to waste smell.
+SENSORY_SMELL_animals: Keywords or phrases relating to animals smell.
+SENSORY_SMELL_nature: Keywords or phrases relating to nature smell.
+FACILITY_REST: Facilities for resting.
+FACILITY_RECREATION: Facilities for resting.
+FACILITY_EXERCISE: Facilities for exercise.
+FACILITY_SIGN: Facilities for signs.
+FACILITY_PARKING: Facilities for parking.
+FACILITY_SANITATION: Facilities for sanitation.
+FACILITY_AESTHETIC: Facilities for aesthetics.
+ACTIVITY_MOVEMENT: Active transport like walking and cycling.
+ACTIVITY_RECREATION_fitness: Activities related to fitness as recreation.
+ACTIVITY_RECREATION_sports: Activities related to sports as recreation.
+ACTIVITY_RECREATION_active: Active activities as recreation such as dog walking, sight seeing.
+ACTIVITY_RECREATION_sedentary: Passive activities as recreation like sitting, reading.
+ACTIVITY_HOUSEHOLD: Household activities.
+ACTIVITY_OCCUPATIONAL: Activities related to work or working.
+ACTIVITY_INCIVILITIES: Inappropriate public behaviors or activities.
+EXOTIC: Some exotic terms,such as gula melaka, Puto Piring, Hipster.
+METAPHOR: Metaphors that are used to express emotions, perceptions, which are normally in text spans. Metaphor labels highlight word senses that are different from its conventional meanings. In most cases, it can co-occur with RESPONSE labels.
+WEATHER: Weather.
+POSITION: Positions where people stand, place their eyes upon, or mention in text. This may be informative when you combine the texts and images; it will also help us to understand user behaviour.
+RESPONSE: Human response to spatial environment.It often occurs after trigger words such as “make”, “let”, “feel”, “cause”.
+PERSON: People, including fictional.
+NORP: Nationalities or religious or political groups.
+ORG: Companies, agencies, institutions, etc.
+PRODUCT: Objects, vehicles, foods, etc. (Not services.)
+EVENT: Named hurricanes, battles, wars, sports events, etc.
+WORK_OF_ART: Titles of books, songs, etc.
+DATE: Absolute or relative dates or periods.
+TIME: Times smaller than a day.
+MONEY: Monetary values, including unit.
+QUANTITY: Measurements, as of weight or distance.
+ORDINAL:  “first”, “second”, etc.
+CARDINAL: Numerals that do not fall under another type.
 
