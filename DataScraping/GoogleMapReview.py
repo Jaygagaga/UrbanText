@@ -280,12 +280,6 @@ def scrapy(url,street,args,driver,page_number=None):
         except:
             total_reviews = review_info.split('\n')[3]
         category = review_info.split('\n')[4]
-
-
-    # total_reviews = int(driver.find_element(By.XPATH,'.//div[@class="skqShb"]').text.split('\n')[1].split(' reviews')[0].replace(',','')) \
-    #     if driver.find_element(By.XPATH,'.//div[@class="skqShb"]') else driver.find_element(By.XPATH,'.//div[@class="skqShb"]').text
-    # total_rating = driver.find_element(By.XPATH, './/div[@class="skqShb"]').text.split('\n')[0] if total_reviews else None
-    # category = driver.find_element(By.XPATH, './/div[@class="skqShb"]').text.split('\n')[-1] if total_reviews and len(driver.find_element(By.XPATH, './/div[@class="skqShb"]').text.split('\n')) > 2 else None
     # Go to review section
     try:
         driver.find_element(By.XPATH, './/span[contains(@aria-label, "reviews")]').click()
