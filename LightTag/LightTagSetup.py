@@ -554,12 +554,12 @@ def main():
     #
     # print('Registering the models and uploading suggestions.')
     # registerd_models = {}  # Capture the models we registered already
-    # # session = LTSession(workspace='urbantext0', user='e0441605@u.nus.edu', pwd='Wxhy137-')
-    # LIGHTTAG_DOMAIN = 'urbantext0'  # should be your lighttag domain
+    # # session = LTSession(workspace='', user='', pwd='')
+    # LIGHTTAG_DOMAIN = ''  # should be your lighttag domain
     # SERVER = 'https://{domain}.lighttag.io/api/'.format(domain=LIGHTTAG_DOMAIN)
     # API_BASE = SERVER + 'v1/'
-    # MY_USER = 'jie.zhang137547@icloud.com'
-    # MY_PWD = 'Wxhy137-'
+    # MY_USER = ''
+    # MY_PWD = ''
     # #
     # response = requests.post(SERVER + 'auth/token/login/',
     #                          json={"username": MY_USER, "password": MY_PWD})
