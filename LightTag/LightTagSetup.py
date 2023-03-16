@@ -380,13 +380,7 @@ def main():
     dictionaries = config_dict.concat(text_files)
     print('Available dictionary names: {}'.format(dictionaries.keys()))
     print('Fetching texts from LightTag')
-    session = LTSession(workspace='urbantext0', user='e0441605@u.nus.edu', pwd='Wxhy137-')
-    # session = LTSession(workspace='urbantextnus', user='jie.zhang137547@icloud.com', pwd='Wxhy137-')
-    # dataset1 = session.get(
-    #     'v1/projects/default/datasets/london_gm/examples/').json()  # Use the slug of the dataset to fetch it from the datasets endpoint
-    # dataset2 = session.get(
-    #     'v1/projects/default/datasets/london_ta/examples/').json()
-   # Start an API session 'jie.zhang137547@icloud.com''
+    session = LTSession(workspace='', user='', pwd='')
     dataset1 = session.get(
         'v1/projects/default/datasets/googlemap/examples/').json()  # Use the slug of the dataset to fetch it from the datasets endpoint
     dataset2 = session.get(
