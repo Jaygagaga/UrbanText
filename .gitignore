@@ -6,3 +6,4 @@ Data/processing_data.py
 Data/Reviews/GoogleMap/
 Data/Reviews/TripAdvisor/
 Data/Reviews/London_TA/
+Data/chrome_driver/chromedriver
