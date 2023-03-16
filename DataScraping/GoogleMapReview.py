@@ -90,7 +90,14 @@ def parse_arguments():
         default="/Users/jie/Downloads/chromedriver1",
         help="Record unfound streets or streets without reviews",
     )
-
+    parser.add_argument(
+        '-ff',
+        "--found_path",
+        required=True,
+        type=str,
+        default='./Data/Reviews/GoogleMap/found_streets_reviews_GoogleMap.txt',
+        help="Record unfound streets or streets without reviews",
+    )
 
 
     # args = parser.parse_args(args=[])
@@ -100,6 +107,13 @@ def parse_arguments():
 
 # weblink  = 'https://www.tripadvisor.com.sg/'
 import re
+def log_found(street,args):
+    # global log_street_link_file
+    if os.path.isdir('/'.join(args.found_path.split('/')[:-1])) == False:
+        os.makedirs('/'.join(args.found_path.split('/')[:-1]))
+    if not os.path.exists(args.found_path):
+        open(args.found_path, 'w').write('%s\n' % (street))
+    open(args.found_path, 'a').write('%s\n' % (street))
 def concat(csv_files):
     all_ = pd.DataFrame()
     for i in range(len(csv_files)):
@@ -224,26 +238,48 @@ def scrolling(last_review, driver):
 
     # last_review = driver.find_elements(By.XPATH, '//div[@jstcache="652"]')
     driver.execute_script('arguments[0].scrollIntoView(true);', last_review[-1])
-    sleep(4)
+    sleep(6)
     next_review = driver.find_elements(By.XPATH, '//div[contains(@data-review-id,"C")]')
+
     return next_review
 
-def scrapy(url,street,args,driver,existing_streets_num=0):
+def scrapy(url,street,args,driver,page_number=None):
     #Open one window for a street link and then close it and return to the very first window
     driver.execute_script("window.open('');")
     driver.switch_to.window(driver.window_handles[1])
     sleep(3)
     driver.get(url)
     sleep(4)
+    Scrolling = True
     wait = WebDriverWait(driver, MAX_WAIT)
-
     try:
-        local_name = driver.find_element(By.XPATH, '//h1[class="DUwDvf fontHeadlineLarge"]').text
+        review_info = driver.find_element(By.XPATH, './/div[@class="lMbq3e"]').text
     except:
-        local_name = None
-    total_reviews = int(driver.find_element(By.XPATH,'.//div[@class="skqShb"]').text.split('\n')[1].split(' reviews')[0].replace(',','')) if driver.find_element(By.XPATH,'.//div[@class="skqShb"]').text.split('\n')[1].split(' reviews')[0].replace(',','') else driver.find_element(By.XPATH,'.//div[@class="skqShb"]').text
-    total_rating = driver.find_element(By.XPATH, './/div[@class="skqShb"]').text.split('\n')[0] if total_reviews else None
-    category = driver.find_element(By.XPATH, './/div[@class="skqShb"]').text.split('\n')[-1] if total_reviews and len(driver.find_element(By.XPATH, './/div[@class="skqShb"]').text.split('\n')) > 2 else None
+        review_info = None
+        print('Cannot locate street headlines')
+        Scrolling=False
+    # try:
+    #     local_name = driver.find_element(By.XPATH, '//h1[class="DUwDvf fontHeadlineLarge"]').text
+    # except:
+    #     local_name = None
+    if review_info and len(review_info.split('\n')) == 3:
+        local_name = review_info.split('\n')[0]
+        total_rating = review_info.split('\n')[1]
+        total_reviews = review_info.split('\n')[2].split(' review')[0]
+        category = None
+    if review_info and len(review_info.split('\n')) == 4:
+        local_name = review_info.split('\n')[0]
+        total_rating = review_info.split('\n')[1]
+        total_reviews = review_info.split('\n')[2].split(' review')[0]
+        category =  review_info.split('\n')[3]
+    if review_info and len(review_info.split('\n')) == 5:
+        local_name = review_info.split('\n')[0]
+        total_rating = review_info.split('\n')[2]
+        try:
+            total_reviews = int(re.findall(r'\d+', review_info.split('\n')[3])[0])
+        except:
+            total_reviews = review_info.split('\n')[3]
+        category = review_info.split('\n')[4]
     # Go to review section
     try:
         driver.find_element(By.XPATH, './/span[contains(@aria-label, "reviews")]').click()
@@ -282,28 +318,67 @@ def scrapy(url,street,args,driver,existing_streets_num=0):
     #initialize last_review variale for scrolling
     last_review = driver.find_elements(By.XPATH, '//div[contains(@data-review-id,"C")]')
     # Get page_source and extract texts
-    response = BeautifulSoup(driver.page_source, 'html.parser')
-    review_parser(response, street, args,total_reviews,total_rating,category,local_name)
+
+    # review_parser(response, street, args,total_reviews,total_rating,category,local_name,)
     # Scrolling to get new boxes
     count =0
-    Scrolling = True
+
     page=0
-    while Scrolling:
-        next_review = scrolling(last_review,driver)
-        page += 1
-        print('Going to next page {}'.format(page))
-        if last_review[-1].text != next_review[-1].text:
-            #Get page_source and extract texts
-            response = BeautifulSoup(driver.page_source, 'html.parser')
-            review_parser(response,street,args,total_reviews,total_rating,category,local_name)
-            last_review = next_review
-            sleep(5)
-        else:
-            count += 1
-            if count >= 3:
+    if page_number != None:
+        print('Picking up scraping reviews from existing dataset{}'.format(street))
+        while Scrolling:
+            try:
+                next_review = scrolling(last_review, driver)
+                page += 1
+
+                print('Going to next page {}'.format(page))
+                if page > page_number:
+                    if last_review[-1].text != next_review[-1].text:
+                        # Get page_source and extract texts
+                        response = BeautifulSoup(driver.page_source, 'html.parser')
+                        review_parser(response, street, args, total_reviews, total_rating, category, local_name,page_number=page)
+                        last_review = next_review
+                        sleep(5)
+                    else:
+                        count += 1
+                        sleep(5)
+                        if count >= 3:
+                            Scrolling = False
+                            print('No more reviews')
+                            sleep(5)
+                            log_found(street, args)
+                            break
+            except:
                 Scrolling = False
-                print('No more reviews')
-                sleep(5)
+                break
+
+    else:
+        print('Strating scraping reviews from scratch for street {}'.format(street))
+        if page ==0:
+            response = BeautifulSoup(driver.page_source, 'html.parser')
+            review_parser(response, street, args, total_reviews, total_rating, category, local_name, page_number=page)
+        while Scrolling:
+            try:
+                next_review = scrolling(last_review,driver)
+                page += 1
+                print('Going to next page {}'.format(page))
+                if last_review[-1].text != next_review[-1].text:
+                    #Get page_source and extract texts
+                    response = BeautifulSoup(driver.page_source, 'html.parser')
+                    review_parser(response,street,args,total_reviews,total_rating,category,local_name,page_number=page)
+                    last_review = next_review
+                    sleep(5)
+                else:
+                    count += 1
+                    sleep(5)
+                    if count >= 3:
+                        Scrolling = False
+                        print('No more reviews')
+                        sleep(5)
+                        log_found(street, args)
+                        break
+            except:
+                Scrolling = False
                 break
 
 
@@ -311,7 +386,7 @@ def scrapy(url,street,args,driver,existing_streets_num=0):
     driver.switch_to.window(driver.window_handles[0])
 
 #Parsing the reviews
-def review_parser(response,street,args,total_reviews,total_rating,category,local_name):
+def review_parser(response,street,args,total_reviews,total_rating,category,local_name,page_number=0):
     reviews_boxes = response.find_all("div",attrs={"data-review-id": True})
     for num, box in enumerate(reviews_boxes):
         # print(num)
@@ -338,6 +413,9 @@ def review_parser(response,street,args,total_reviews,total_rating,category,local
                 data['picture_urls'] = ','.join([ast.literal_eval(url) for url in picture_urls])
             except:
                 data['picture_urls'] = None
+        else:
+            data['picture_urls'] = None
+
 
         df = pd.DataFrame(dict([(k, pd.Series(v)) for k, v in data.items()]))
         df['total_reviews'] = total_reviews
@@ -345,6 +423,7 @@ def review_parser(response,street,args,total_reviews,total_rating,category,local
         df['category'] = category
         df['street'] = street
         df['local_name'] = local_name
+        df['page_number'] = page_number
 
         # review_df =pd.concat([review_df, df])
 
@@ -361,6 +440,7 @@ def main():
     print('Current root directory: ', os.getcwd())
     args = parse_arguments()
     streets_df = pd.read_csv(args.file_path)
+    print(streets_df.columns)
     streets = list(streets_df.Street.unique())
     if os.path.isdir(args.save_path) == False:
         os.makedirs(args.save_path)
@@ -370,13 +450,7 @@ def main():
     print('File path:', args.file_path)
     print('File path:', args.unfound_path)
     print('log_street_link_file', log_street_link_file)
-    # print('Getting streets that have been scraped...')
-    # csv_files = glob.glob(args.save_path + '/*.csv')
-    # all_df = concat(csv_files)
-    # print('Dataframe columns of scraped files:', all_df.columns)
-    # scraped_streets = list(all_df.street.unique())
-    # streets_toscrape = [street for street in streets if street not in scraped_streets]
-    # print('Need to scrape data for {} streets'.format(len(streets_toscrape)))
+
     chromdriver_path = args.driver_path  # Replacing it with your chromdriver_path
     ser = Service(r"{}".format(chromdriver_path))
     driver = webdriver.Chrome(service=ser, options=options)
@@ -386,7 +460,7 @@ def main():
         os.makedirs(args.save_path)
     exsiting_streets = []
     if args.option == 'street_urls':
-        print(args.street_url)
+        print(args.option)
         #if run before, open logged street records and remove them
         if os.path.exists(log_street_link_file)==True:
             with open(log_street_link_file) as f:
@@ -408,8 +482,9 @@ def main():
         print('Need to scrape data for {} streets.'.format(len(streets_toscrape)))
 
         for i, street in enumerate(streets_toscrape):
-            street_name = street + ', ' + args.city
-            get_street_link(i,street, street_name,driver,args,log_street_link_file)
+            if str(street) != 'nan':
+                street_name = street + ', ' + args.city
+                get_street_link(i,street, street_name,driver,args,log_street_link_file)
     if args.option == 'street_reviews':
         ser = Service(r"{}".format(chromdriver_path))
         driver = webdriver.Chrome(service=ser, options=options)
@@ -418,25 +493,46 @@ def main():
         streets = [line.split('==')[1] for line in lines]
         # local_names = [line.split('==')[2] for line in lines]
         streets_urls = [line.split('==')[3] for line in lines]
-        print('Check if any scraped data saved locally.')
-        csv_files = glob.glob(args.save_path + '/*.csv')
-        if len(csv_files) !=0:
-            print('Getting streets that have been scraped...')
-            all_df = concat(csv_files)
-
-            for street,url in zip(streets,streets_urls):
-                # if street not in existing_streets:
-                print(street)
-                existing_streets_num = all_df[all_df.street == street].count()[0]
-                if existing_streets_num < int(all_df[all_df.street == street].total_reviews.iloc[-1])-10:
-                    scrapy(url,street,args,driver,existing_streets_num=existing_streets_num)
-                else:
-                    continue
+        print('Check if any scraped data saved locally through record file (found_path).')
+        if os.path.exists(args.found_path) == True:
+            with open(args.found_path) as f:
+                lines = f.readlines()
+            founded_streets = [line.split('\n')[0] for line in lines]
+            founded_streets = list(set(founded_streets))
+            streets_toscrape = [(street, street_url) for street, street_url in zip(streets, streets_urls)
+                                if street not in founded_streets]
         else:
-            print('Strating scrapying from scratch...')
-            for street, url in zip(streets, streets_urls):
-                print(street)
-                scrapy(url, street, args, driver,existing_streets_num=0)
+            streets_toscrape = [(street, street_url) for street, street_url in zip(streets, streets_urls)]
+        # csv_files = glob.glob(args.save_path + '/*.csv')
+        # for street, url in zip(streets, streets_urls):
+        #     for street,url in zip(streets,streets_urls):
+        # if len(csv_files) !=0:
+        #     print('Getting streets that have been scraped...')
+        #     all_df = concat(csv_files)
+
+        for num, pair in enumerate(streets_toscrape):
+            street = pair[0]
+            url = pair[1]
+            print('Scraping reviews for No.{} {}'.format(num,street))
+            # if street not in existing_streets:
+            if os.path.exists(os.path.join(args.save_path, "{}.csv".format('_'.join(street.split())))) == True:
+                review_df = pd.read_csv(os.path.join(args.save_path, "{}.csv".format('_'.join(street.split()))))
+                total_reviews = review_df.total_reviews.iloc[-1]
+                if 'page_number' in review_df.columns:
+                    # current_page = review_df.current_page.iloc[-1]
+                    page_number = review_df.page_number.iloc[-1]
+                else:
+                    review_number = len(review_df)
+                    page_number = None
+            else:
+                total_reviews = None
+                page_number = None
+            # existing_streets_num = all_df[all_df.street == street].count()[0]
+            # if existing_streets_num != 0 :
+            #     total_reviews = all_df[all_df.street == street].total_reviews.iloc[-1]
+            #     if existing_streets_num < total_reviews:
+            scrapy(url, street, args, driver, page_number=page_number)
+            sleep(8)
 
     # driver.get('https://www.tripadvisor.com.sg/')
 
