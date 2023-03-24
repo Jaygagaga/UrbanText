@@ -480,6 +480,8 @@ def loc_parser(response,city,args,i):
                     data['url'] = review.find('div', class_="NxKBB").find('a')['href'] if review.find('div',
                                                                                                       class_="NxKBB").find(
                         'a') else None
+                    data['address'] = review.find('div', class_="alPVI eNNhq PgLKC tnGGX yzLvM").find_all('div')[3].text if review.find('div', class_="alPVI eNNhq PgLKC tnGGX yzLvM").find_all('div') else None
+                    data['category'] = review.find('div', class_="alPVI eNNhq PgLKC tnGGX yzLvM").find_all('div')[0].text if review.find('div', class_="alPVI eNNhq PgLKC tnGGX yzLvM") else None
 
                     data['reviews_num'] = review.find('span', class_="biGQs _P pZUbB osNWb").text if review.find('span',
                                                                                                                  class_="biGQs _P pZUbB osNWb") else None
