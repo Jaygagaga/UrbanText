@@ -452,7 +452,6 @@ def main():
         return [i for i in lst if i not in removed]
 
 
-
     text_with_suggestions = []
     for id, example in enumerate(examples):
         print('No. {} example'.format(id))
