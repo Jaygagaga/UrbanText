@@ -40,6 +40,20 @@ def parse_arguments():
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        '-f',
+        '--file_path',
+        type=str,
+        default='./Data/Reviews/GoogleMap_Singapore/all_reviews.csv',
+        help='Local path where you put review dataset'
+    )
+    parser.add_argument(
+        '-s',
+        '--save_path',
+        type=str,
+        default='./Data/Reviews/GoogleMap_Singapore/all_reviews_suggestions.csv',
+        help='Local path where you save reviews with NER suggestions'
+    )
+    parser.add_argument(
         '-p',
         "--helper_path",
         required=True,
@@ -141,7 +155,7 @@ class ReformatDict(object):
 # term105 = [i.lower()+'\t'+'405' for i in act_term[62:59]]
 import re
 """Model 1: using dictionaries as look-up tables"""
-dict_with_levels = ['smell_dictionary_eng.txt','design_dictionary_eng.txt']
+
 class ConfigDict(object):
     def __init__(self, helper_path=None,dict_with_levels=None, dictname2tagname=None):
         """
@@ -161,6 +175,8 @@ class ConfigDict(object):
     def concat(self, txt_files): #concate all dictionaries into a dictionary data format
         all_dict = {}
         for file in txt_files:
+            # if 'SOUND' in file:
+            #     print('SOun')
             if file.split('/')[-1] in self.dict_with_levels: #check if dictionaries contains multi levels of categories
                 category2id = {}
                 category_tems_dcit = {}
@@ -171,28 +187,31 @@ class ConfigDict(object):
                     # line = f.readline()
                 for num, line in enumerate(lines):
                     # print(num, line)
-                    if num+1 < category_indices[1] and len(line.split('\t'))>1:
-                        category_id = line.split('\t')[0].lower()
-                        category_name = line.split('\t')[1].lower()
+                    if num < category_indices[1] and len(re.split('\t|\s', line))>1:
+                        category_id = re.split('\t|\s', line)[0].lower()
+                        category_name = re.split('\t|\s', line)[-1].lower()
                         category2id[category_name] = category_id
                         # print(category2id)
                     else:
-                        if len(line.split('\t'))>1 and ',' not in line.split('\t')[-1]:
-                            if line.split('\t')[1] not in category_tems_dcit:
-                                category_tems_dcit[line.split('\t')[1]] = [line.split('\t')[0]]
+                        if len(re.split('\t|\s', line)) > 1 and ',' not in re.split('\t|\s', line)[-1]:
+                            if re.split('\t|\s', line)[-1] not in category_tems_dcit:
+                                category_tems_dcit[re.split('\t|\s', line)[-1]] = [re.split('\t|\s', line)[0]]
                                 # print(category_tems_dcit)
                             else:
-                                category_tems_dcit[line.split('\t')[1]] += [line.split('\t')[0]]
+                                category_tems_dcit[re.split('\t|\s', line)[-1]] += [re.split('\t|\s', line)[0]]
                                 # print(category_tems_dcit)
-                        if len(line.split('\t')) > 1 and ',' in line.split('\t')[-1]:
-                            for id in ast.literal_eval(line.split('\t')[-1]).split(','):
+                        if len(re.split('\t|\s', line)) > 1 and ',' in re.split('\t|\s', line)[-1]:
+                            for id in ast.literal_eval(re.split('\t|\s', line)[-1]).split(','):
                                 if id not in category_tems_dcit:
-                                    category_tems_dcit[id] = [line.split('\t')[0]]
+                                    category_tems_dcit[id] = [re.split('\t|\s', line)[0]]
                                 else:
-                                    category_tems_dcit[id] += [line.split('\t')[0]]
+                                    category_tems_dcit[id] += [re.split('\t|\s', line)[0]]
                 combined_dict = {}
                 for key, term in category2id.items():
-                    combined_dict[key] = (term, category_tems_dcit[term])
+                    try:
+                        combined_dict[key] = (term, category_tems_dcit[term])
+                    except:
+                        print('Cannot found {}'.format(term))
                 all_dict[file.split('/')[-1].split('.')[0]] = combined_dict
             else:
                 with open(file, 'r') as f:
@@ -358,8 +377,8 @@ def main():
         # 'activity_dictionary_eng':'ACTIVITY',
         # 'spatial_dictionary_eng':'SPATIAL',
         # 'smell_dictionary_eng':'SMELL',
-        'social_dictionary_eng': 'PEOPLE',
-        'weather_dictionary_eng': 'WEATHER',
+        'PERSON': 'PERSON',
+        'WEATHER': 'WEATHER',
 
     }
     if args.reformat_dict == 1:
@@ -373,30 +392,32 @@ def main():
         reformat_dict = ReformatDict()
         reformat_dict.reformat_dic(fac_path, fac_save_path, fac_coding)
         reformat_dict.reformat_dic(act_path, act_save_path, act_coding)
-    dict_with_levels = ['smell_dictionary_eng.txt', 'design_dictionary_eng.txt', 'facility_dictionary_eng_.txt', 'activity_dictionary_eng_.txt']
+    dict_with_levels = ['SENSORY_SMELL.txt','SENSORY_SOUND.txt','SPATIAL.txt', 'FACILITY.txt','ACTIVITY.txt']
     print('Configuring dictionaries as look-tables for keyword matching')
     config_dict = ConfigDict(helper_path=args.helper_path, dict_with_levels=dict_with_levels,
                              dictname2tagname=dictname2tagname)
     dictionaries = config_dict.concat(text_files)
     print('Available dictionary names: {}'.format(dictionaries.keys()))
     print('Fetching texts from LightTag')
-    session = LTSession(workspace='', user='', pwd='')
+    session = LTSession(workspace='urbantext0', user='e0441605@u.nus.edu', pwd='Wxhy137-')
     dataset1 = session.get(
-        'v1/projects/default/datasets/googlemap/examples/').json()  # Use the slug of the dataset to fetch it from the datasets endpoint
-    dataset2 = session.get(
-        'v1/projects/default/datasets/tripadvisor/examples/').json()  # Use the slug of the dataset to fetch it from the datasets endpoint
-    examples = dataset1 + dataset2  # Use the slug of the dataset to fetch it from the datasets endpoint
-    print(len(dataset1), len(dataset2), len(examples))
-    print('Setting up models for extracting entities as suggestions')
-    examples =examples[:1000]
-    models = ConfigModels(examples=examples,dictionaries=dictionaries)
+        'v1/projects/default/datasets/googlemap_singapore/examples/').json()  # Use the slug of the dataset to fetch it from the datasets endpoint
+    # dataset2 = session.get(
+    #     'v1/projects/default/datasets/tripadvisor/examples/').json()  # Use the slug of the dataset to fetch it from the datasets endpoint
+    # examples = dataset1 + dataset2  # Use the slug of the dataset to fetch it from the datasets endpoint
+    # print(len(dataset1), len(dataset2), len(examples))
+    # print('Setting up models for extracting entities as suggestions')
+    # examples =examples[:1000]
+    models = ConfigModels(examples=dataset1,dictionaries=dictionaries)
     print('Running models to get different entity suggestions')
 
     result_dict = models.process_multiple_examples()
+    print('Finished!')
     #Due to bugs in models.process_with_dict, have to remove duplicated suggetion from the list
     duplicated_removed =[i for n, i in enumerate(result_dict['models']['dictionary_search'])
             if i not in result_dict['models']['dictionary_search'][n + 1:]]
     result_dict['models']['dictionary_search'] = duplicated_removed
+    args.suggestion_json_path= './LightTag/NER_suggestions_GM_SG.json'
     with open(args.suggestion_json_path, "w") as fp:
         json.dump(result_dict, fp)
     # model_dict1 = {  # Dictionary of models, each has a list of suggestions
@@ -453,7 +474,7 @@ def main():
 
 
     text_with_suggestions = []
-    for id, example in enumerate(examples):
+    for id, example in enumerate(dataset1):
         print('No. {} example'.format(id))
         # content = examples[6496]['content']
         content = example['content']
@@ -496,16 +517,18 @@ def main():
 
                 text_with_suggestions.append((review_id,new_content))
                 # break
-    gm_path = './Data/Reviews/GoogleMap/all_reviews.csv'
-    ta_path = './Data/Reviews/TripAdvisor/all_reviews.csv'
-    data = pd.read_csv(gm_path)
-    data1= pd.read_csv(ta_path)
-    data1.rename(columns = {'picture_url':'picture_urls'}, inplace=True)
+    # gm_path = './Data/Reviews/GoogleMap/all_reviews.csv'
+    # ta_path = './Data/Reviews/TripAdvisor/all_reviews.csv'
+    # data = pd.read_csv(gm_path)
+    # data1= pd.read_csv(ta_path)
 
+    # data1.rename(columns = {'picture_url':'picture_urls'}, inplace=True)
+    # data = pd.read_csv(args.file_path)
+    data = pd.read_csv('./Data/Reviews/GoogleMap_Singapore/all_reviews.csv')
     common_cols = ['review_id', 'review_text', 'review_date', 'review_rating', 'picture_urls', 'total_reviews', 'street', 'local_name', 'page_number', 'word_length']
-    data = data[common_cols]
-    data1 = data1[common_cols]
-    df = pd.concat([data,data1])
+    df = data[common_cols]
+    # data1 = data1[common_cols]
+    # df = pd.concat([data,data1])
     new =  pd.DataFrame(text_with_suggestions, columns =['review_id', 'text_with_suggestions'])
     #Subseting dataset by text_with_suggestions
     df_ = df[df.review_id.isin(new.review_id.to_list())]
@@ -513,14 +536,17 @@ def main():
     new_df = df_.merge(new, how = 'left', on = 'review_id')
     # new_df_ = new_df[new_df.text_with_suggestions.isnull()==False]
     new_df['text_with_suggestions'] =  new_df['text_with_suggestions'].fillna(new_df.review_text)
-    new_df.to_csv('./Data/Reviews/London_pilot.csv')
+
     new_df = new_df.sample(frac=1, random_state=1)
-    df_team1 = new_df.iloc[:227]
-    df_team2 = new_df.iloc[227:227*2]
-    df_team3 = new_df.iloc[227*2:227 * 3]
-    df_team1.to_csv('./Data/Reviews/pilot_team1.csv')
-    df_team2.to_csv('./Data/Reviews/pilot_team2.csv')
-    df_team3.to_csv('./Data/Reviews/pilot_team3.csv')
+    df_team2 = new_df.iloc[:227]
+    # df_team2 = new_df.iloc[227:227*2]
+    # df_team3 = new_df.iloc[227*2:227 * 3]
+    # df_team1.to_csv('./Data/Reviews/pilot_team1.csv')
+    # df_team2.to_csv('./Data/Reviews/pilot_team2.csv')
+    # df_team3.to_csv('./Data/Reviews/pilot_team3.csv')
+    new_df.to_csv('./Data/Reviews/GoogleMap_Singapore.csv')
+    df_team2.to_csv('./Data/Reviews/GoogleMap_Singapore_team2.csv')
+    new_df.to_csv(args.save_path)
     # for model_name in model_outputs:
     #     model_outputs[model_name] = list(map(normalize_suggestion, model_outputs[model_name]))
     #
@@ -535,9 +561,9 @@ def main():
 
     additional_tags = [t for t in tags_des_dict if t not in tags_]
     no_tags = ['LANGUAGE', 'CITY', 'LOCATION', 'MISC', 'CAUSE_OF_DEATH', 'RELIGION', 'FAC','SET',  'LAW', 'MONEY','PERCENT','PRODUCT', 'NUMBER',
-               'CRIMINAL_CHARGE','TITLE','STATE_OR_PROVINCE', 'NATIONALITY','LOC']
+               'CRIMINAL_CHARGE','TITLE','STATE_OR_PROVINCE', 'NATIONALITY','LOC', 'ORGANIZATION']
     schema_def = {
-        'name': 'Combined Tags',
+        'name': 'Combined Tags New',
         'tags': [{'name': t, 'description': tags_des_dict[t] if t in tags_des_dict else t} for t in tags_+additional_tags if t not in no_tags],
         'classification_types':[{'name': 'Negative', 'description': 'Negative sentiment'},
                                 {'name': 'Positive', 'description': 'Positive sentiment'}]
@@ -545,8 +571,8 @@ def main():
 
     new_schema = session.post('v1/projects/default/schemas/bulk/', json=schema_def)
     # schema = session.get('v1/projects/default/schemas/').json()
-    # schema_id = new_schema.json()['id']
-    # print('New schema id is {}'.format(schema_id))
+    schema_id = new_schema.json()['id']
+    print('New schema id is {}'.format(schema_id))
     #
     #
     #
@@ -605,18 +631,18 @@ def main():
     # session.post(my_task['url'], json={'suggestion_models': my_task_models})
     """Setting up teams"""
     annotators = session.get('v1/projects/default/annotators/').json()
-    team1 =[annotators[-1], annotators[0]]
-    team2 =[annotators[1], annotators[3]]
-    team3 = [a for a in annotators if a['id'] == 6] + [a for a in annotators if a['id'] == 3]
-    # team3 =[annotators[2], annotators[0]]
-    Team1 = {"name": "Team1", "description": "Team1", "members": team1}
-    Team2 = {"name": "Team2", "description": "Team1", "members": team2}
-    Team3 = {"name": "Team3", "description": "Team3", "members": team3}
-    session.post('v1/projects/default/teams/', json=Team1)
-    session.post('v1/projects/default/teams/', json=Team2)
-    session.post('v1/projects/default/teams/', json=Team3)
-    teams = session.get('v1/projects/default/teams/').json()
-    pprint(teams)
+    # team1 =[annotators[-1], annotators[0]]
+    # team2 =[annotators[1], annotators[3]]
+    # team3 = [a for a in annotators if a['id'] == 6] + [a for a in annotators if a['id'] == 3]
+    # # team3 =[annotators[2], annotators[0]]
+    # Team1 = {"name": "Team1", "description": "Team1", "members": team1}
+    # Team2 = {"name": "Team2", "description": "Team1", "members": team2}
+    # Team3 = {"name": "Team3", "description": "Team3", "members": team3}
+    # session.post('v1/projects/default/teams/', json=Team1)
+    # session.post('v1/projects/default/teams/', json=Team2)
+    # session.post('v1/projects/default/teams/', json=Team3)
+    # teams = session.get('v1/projects/default/teams/').json()
+    # pprint(teams)
 
 
 if __name__ =='__main__':
