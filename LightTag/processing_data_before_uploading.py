@@ -1,7 +1,13 @@
+import shutil
+
 import pandas as pd
 import argparse
 import os
 import glob
+
+def save_zip(df, zip_path):
+    compression_options = dict(method='zip', archive_name=f'{zip_path}.csv')
+    df.to_csv(f'{zip_path}.zip', compression=compression_options)
 def parse_arguments():
 
     parser = argparse.ArgumentParser()
@@ -22,47 +28,23 @@ def parse_arguments():
         help='Root directory of the project',
     )
 
-    # parser.add_argument(
-    #     '-s1',
-    #     "--save_path_links",
-    #     required=True,
-    #     type=str,
-    #     default='./Data/Reviews/TripAdvisor/loc_reviews/loc_links_Wuhan.csv',
-    #     help="local path where you want to save your scraped data",
-    # )
     parser.add_argument(
         '-s',
         "--save_path",
         required=True,
         type=str,
-        default='./Data/Reviews/GoogleMap/all_reviews.csv',
+        default='./Data/Reviews/GoogleMap/all_reviews',
         help="local path where you want to save your processed and combined dataset",
     )
-    # parser.add_argument(
-    #     '-u',
-    #     "--unfound_path",
-    #     required=True,
-    #     type=str,
-    #     default='./Data/Reviews/TripAdvisor/unfound_POIs_reviews_TripAdvisor.txt',
-    #     help="Record unfound streets or streets without reviews",
-    # )
-    # parser.add_argument(
-    #     '-ff',
-    #     "--found_path",
-    #     required=True,
-    #     type=str,
-    #     default='./Data/Reviews/TripAdvisor/found_POIs_reviews_TripAdvisor.txt',
-    #     help="local path where you record streets with complete reviews.",
-    # )
-    # parser.add_argument(
-    #     '-option',
-    #     "--option",
-    #     required=True,
-    #     type=str,
-    #     default='street_urls',
-    #     help="Get links to street on GoogleMap",
-    # )
-    # args = parser.parse_args(args=[])
+    parser.add_argument(
+        '-e',
+        "--extension",
+        required=True,
+        type=str,
+        default='csv',
+        help="file extension",
+    )
+
     args = parser.parse_args()#args=[]
 
     return args
@@ -79,6 +61,8 @@ def concat(csv_files):
 from nltk.tokenize import WordPunctTokenizer
 text = "Reset your password; if you just can't remember your old one?"
 
+
+
 def correct_space(doc):
     tokens = WordPunctTokenizer().tokenize(doc)
     lens = len(tokens)
@@ -89,7 +73,7 @@ def correct_space(doc):
         else:
             new_sent +=token
     return new_sent, lens
-
+import zipfile
 
 
 def main():
@@ -97,17 +81,32 @@ def main():
     os.chdir(args.root_directory)
     print('Current root directory: ', os.getcwd())
     print('Reading and concatenating all street reviews in {}'.format(args.file_path))
-    csv_files =  glob.glob(args.file_path + '/*.csv')
-    reviews_df = concat(csv_files)
+    if 'zip' in args.file_path:
+        reviews_df = pd.DataFrame()
+        with zipfile.ZipFile(args.file_path) as z:
+            for filename in z.namelist():
+                if'__MACOSX' not in filename and filename.split('/')[-1] != '':
+                    try:
+                        df = pd.read_csv(z.open(filename),encoding="utf-8")
+                        reviews_df = pd.concat([reviews_df, df])
+                    except:
+                        print('Cannot open file {}'.format(filename))
+    else:
+        csv_files =  glob.glob(args.file_path + '/*.csv')
+        reviews_df = concat(csv_files)
     reviews_df = reviews_df.drop_duplicates('review_id')
     print('Total number of review texts is {}'.format(len(reviews_df)))
-
+    reviews_df.review_text = reviews_df.review_text.astype(str)
     content = reviews_df.review_text.map(lambda x: correct_space(x)[0])
     reviews_df['review_text'] = content
     reviews_df['word_length'] =reviews_df.review_text.map(lambda x: correct_space(x)[1])
     reviews_df = reviews_df[reviews_df['word_length']>2]
     print('Total number of reviews with texts longer than 2 words is {}'.format(len(reviews_df)))
-    reviews_df.to_csv(args.save_path)
+    if args.extension == 'zip':
+        save_zip(reviews_df, args.save_path)
+    if args.extension == 'csv':
+        reviews_df.to_csv(args.save_path)
+    print('Saved processed csv file in {}'.format(args.save_path))
 
 if __name__ == '__main__':
     main()
