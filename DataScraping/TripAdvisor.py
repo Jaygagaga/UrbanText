@@ -135,8 +135,19 @@ def main():
     os.chdir('/Users/jie/UrbanText')
     print('Current root directory: ', os.getcwd())
     args = parse_arguments()
+    reviews_files = glob.glob(args.save_path+ '/*.csv')
+    review_df = pd.DataFrame()
+    for i in reviews_files:
+        df = pd.read_csv(i, encoding='utf-8',on_bad_lines='skip')
+        review_df = pd.concat([review_df, df])
+    #Last street in your review datasets folder
+    last_street =reviews_files[-1].split('/')[-1].split('.csv')[0].replace('_', ' ')
     streets_df = pd.read_csv(args.file_path)
-    streets = list(streets_df.Street.unique())
+    streets = streets_df.Street.iloc[streets_df.Street.to_list().index(last_street):].unique()
+    #All local names of streets in scraped review dataset
+    local_names = review_df.local_name.unique()
+    # streets_df = pd.read_csv(args.file_path).iloc[264:]
+    # streets = list(streets_df.Street.unique())
 
     print('City:',args.city)
     print('Save path:', args.save_path)
@@ -186,7 +197,7 @@ def main():
             total_reviews = None
             current_page = None
             page_number = None
-        scrapy_street(num, street, args,current_page=current_page,total_reviews=total_reviews,page_number=page_number)
+        scrapy_street(num, street, args,local_names,current_page=current_page,total_reviews=total_reviews,page_number=page_number)
         sleep(8)
 
 
@@ -217,7 +228,7 @@ def check_review2(driver):
         return False
 
 #Main function for scraping streets
-def scrapy_street(num,street, args,current_page=None, total_reviews=None,page_number=None):
+def scrapy_street(num,street, args,local_names,current_page=None, total_reviews=None,page_number=None):
     print('Scraping for No.{} street {}'.format(num,street))
     driver.execute_script("window.open('');")
     driver.switch_to.window(driver.window_handles[1])
@@ -261,7 +272,7 @@ def scrapy_street(num,street, args,current_page=None, total_reviews=None,page_nu
                             current_page = driver.current_url
                         else:
                             current_page = next_page
-                        review_parser(response, street, args, i, total_reviews, current_page)
+                        review_parser(response, street, args, i, total_reviews, current_page, local_names)
                         sleep(6)
                     else:
                         print("No reviews anymore.")
@@ -327,7 +338,7 @@ def scrapy_street(num,street, args,current_page=None, total_reviews=None,page_nu
                 if not total_reviews:
                     try:
                         total_reviews = int(
-                            driver.find_element(By.XPATH, './/span[@class="yyzcQ"]').text.split()[0].replace(',', ''))
+                            driver.find_element(By.XPATH, './/span[@class="KAVFZ"]').text.split()[0].replace(',', ''))
                     except:
                         total_reviews = None
 
@@ -363,13 +374,16 @@ def scrapy_street(num,street, args,current_page=None, total_reviews=None,page_nu
                                 print('Cannot locate next page')
                         sleep(6)
                         if check_review2(driver): #or check_review1(driver)
-                            response = BeautifulSoup(driver.page_source, 'html.parser')
-                            sleep(2)
+                            if next_page and current_page == next_page:
+                                Scrolling = False
+                            else:
+                                response = BeautifulSoup(driver.page_source, 'html.parser')
+                                sleep(2)
                             if i ==1:
                                 current_page = driver.current_url
                             else:
                                 current_page = next_page
-                            review_parser(response, street,args,i, total_reviews,current_page)
+                            review_parser(response, street,args,i, total_reviews,current_page,local_names)
                             sleep(6)
                         else:
                             print("No reviews anymore.")
@@ -404,61 +418,64 @@ def scrapy_street(num,street, args,current_page=None, total_reviews=None,page_nu
 
 
 
-def review_parser(response,street,args,i,total_reviews,current_page):
+def review_parser(response,street,args,i,total_reviews,current_page, local_names):
     #Parsing reviews on single page
     try:
         local_name = response.find('h1',class_ = 'QdLfr b d Pn').text if response.find('h1',class_ = 'QdLfr b d Pn') else response.find('h1',class_="biGQs _P fiohW eIegw").text
     except:
         local_name =None
         print('Cannot get local name for {}'.format(street))
-    try:
-        reviews_boxes = response.find("div", class_="LbPSX").find_all('div', class_="C") if response.find("div", class_="LbPSX") else None
-        #response.find_all('div', class_='YibKl MC R2 Gi z Z BB pBbQr')
-    except:
-        reviews_boxes = None
-        print('Cannot locate review boxes for street {}'.format(street))
-    if reviews_boxes:
-        # reviews_boxes = reviews_boxes.find_all('div', class_="C")
+    if local_name not in local_names:
+        try:
+            reviews_boxes = response.find("div", class_="LbPSX").find_all('div', class_="C") if response.find("div", class_="LbPSX") else None
+            #response.find_all('div', class_='YibKl MC R2 Gi z Z BB pBbQr')
+        except:
+            reviews_boxes = None
+            print('Cannot locate review boxes for street {}'.format(street))
+        if reviews_boxes:
+            # reviews_boxes = reviews_boxes.find_all('div', class_="C")
 
-        for num, review in enumerate(reviews_boxes):
-            print('Parsing review No.{} on page {} for street {}'.format(num,i,street))
-            data = {}
-            # review = reviews_boxes[1]
-            data['user_id'] = review.find('span', class_ = 'biGQs _P fiohW fOtGX').text if review.find('span', class_ = 'biGQs _P fiohW fOtGX') else None
-            data['user_loc'] = review.find('div', class_ = 'biGQs _P pZUbB osNWb').text if review.find('div', class_ = 'biGQs _P pZUbB osNWb') else None
-            data['review_id'] = review.find('div', class_ = '_c').select_one("div:nth-of-type(3)").find('a')['href'].replace('/ShowUserReviews-','') if review.find('div', class_ = '_c').select_one("div:nth-of-type(3)") else None
-            data['review_title'] = review.find('div', class_ = 'biGQs _P fiohW qWPrE ncFvv fOtGX').find('span', class_ = 'yCeTE').text if review.find('div', class_ = 'biGQs _P fiohW qWPrE ncFvv fOtGX').find('span', class_ = 'yCeTE') else None
-            data['review_date'] = review.find('div', class_ = 'TreSq').find('div').text.replace('Written ','') if review.find('div', class_ = 'TreSq').find('div') else None
-            data['review_text'] = review.find('div',class_= 'biGQs _P pZUbB KxBGd').find('span',class_='yCeTE').text if review.find('div',class_= 'biGQs _P pZUbB KxBGd').find('span',class_='yCeTE') else None
-            pictures = review.find('div', class_= 'LblVz _e q').find_all('picture',class_='NhWcC _R mdkdE') if review.find('div', class_= 'LblVz _e q') else None
-            data['picture_url'] = ','.join([pic.find('img')['src'] for pic in pictures]) if pictures else None
-            data['review_rating'] = review.find('svg', attrs={"aria-label": True})['aria-label'][:3]
-            data['street'] = street if street else None
-            data['city'] = args.city if args.city else None
-            data['local_name'] = local_name
-            df = pd.DataFrame(dict([(k,pd.Series(v)) for k,v in data.items()]))
-            df['total_reviews'] = total_reviews
-            df['current_page']  = current_page
-            # df['page_number'] = re.findall(r"-or(\d+)-", current_page)[0]
-            df['page_number'] = i
+            for num, review in enumerate(reviews_boxes):
+                print('Parsing review No.{} on page {} for street {}'.format(num,i,street))
+                data = {}
+                # review = reviews_boxes[1]
+                data['user_id'] = review.find('span', class_ = 'biGQs _P fiohW fOtGX').text if review.find('span', class_ = 'biGQs _P fiohW fOtGX') else None
+                data['user_loc'] = review.find('div', class_ = 'biGQs _P pZUbB osNWb').text if review.find('div', class_ = 'biGQs _P pZUbB osNWb') else None
+                data['review_id'] = review.find('div', class_ = '_c').select_one("div:nth-of-type(3)").find('a')['href'].replace('/ShowUserReviews-','') if review.find('div', class_ = '_c').select_one("div:nth-of-type(3)") else None
+                data['review_title'] = review.find('div', class_ = 'biGQs _P fiohW qWPrE ncFvv fOtGX').find('span', class_ = 'yCeTE').text if review.find('div', class_ = 'biGQs _P fiohW qWPrE ncFvv fOtGX').find('span', class_ = 'yCeTE') else None
+                data['review_date'] = review.find('div', class_ = 'TreSq').find('div').text.replace('Written ','') if review.find('div', class_ = 'TreSq').find('div') else None
+                data['review_text'] = review.find('div',class_= 'biGQs _P pZUbB KxBGd').find('span',class_='yCeTE').text if review.find('div',class_= 'biGQs _P pZUbB KxBGd').find('span',class_='yCeTE') else None
+                pictures = review.find('div', class_= 'LblVz _e q').find_all('picture',class_='NhWcC _R mdkdE') if review.find('div', class_= 'LblVz _e q') else None
+                data['picture_url'] = ','.join([pic.find('img')['src'] for pic in pictures]) if pictures else None
+                data['review_rating'] = review.find('svg', attrs={"aria-label": True})['aria-label'][:3]
+                data['street'] = street if street else None
+                data['city'] = args.city if args.city else None
+                data['local_name'] = local_name
+                df = pd.DataFrame(dict([(k,pd.Series(v)) for k,v in data.items()]))
+                df['total_reviews'] = total_reviews
+                df['current_page']  = current_page
+                # df['page_number'] = re.findall(r"-or(\d+)-", current_page)[0]
+                df['page_number'] = i
 
-            # review_df =pd.concat([review_df, df])
-            if os.path.isdir(args.save_path) == False:
-                os.makedirs(args.save_path)
-            file_name = street.replace(' ', '_')
-            if os.path.isfile(args.save_path + '/{}.csv'.format(file_name)) == False:
-                df.to_csv(args.save_path + '/{}.csv'.format(file_name))
-            else:
-                existing = pd.read_csv(args.save_path + '/{}.csv'.format(file_name))
+                # review_df =pd.concat([review_df, df])
+                if os.path.isdir(args.save_path) == False:
+                    os.makedirs(args.save_path)
+                file_name = street.replace(' ', '_')
+                if os.path.isfile(args.save_path + '/{}.csv'.format(file_name)) == False:
+                    df.to_csv(args.save_path + '/{}.csv'.format(file_name))
+                else:
+                    existing = pd.read_csv(args.save_path + '/{}.csv'.format(file_name))
 
-                if 'current_page' not in existing.columns:
-                    existing['current_page'] = None
-                    existing['page_number'] = None
-                existing = existing[df.columns.to_list()]
-                if df.review_id.iloc[0] not in list(existing.review_id.unique()):
-                    df.to_csv(args.save_path + '/{}.csv'.format(file_name),header=False,mode='a')
+                    if 'current_page' not in existing.columns:
+                        existing['current_page'] = None
+                        existing['page_number'] = None
+                    existing = existing[df.columns.to_list()]
+                    if df.review_id.iloc[0] not in list(existing.review_id.unique()):
+                        df.to_csv(args.save_path + '/{}.csv'.format(file_name),header=False,mode='a')
+        else:
+            pass
     else:
-        print('Failed to get reviews on page {}'.format(i))
+        print('{} named {} on Trip Advisor already exists in review dataset'.format(street,local_name))
 
 if __name__ =='__main__':
     main()
