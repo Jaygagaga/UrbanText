@@ -136,16 +136,19 @@ def main():
     print('Current root directory: ', os.getcwd())
     args = parse_arguments()
     reviews_files = glob.glob(args.save_path+ '/*.csv')
-    review_df = pd.DataFrame()
+    all_review_df = pd.DataFrame()
     for i in reviews_files:
         df = pd.read_csv(i, encoding='utf-8',on_bad_lines='skip')
-        review_df = pd.concat([review_df, df])
+        all_review_df = pd.concat([all_review_df, df])
     #Last street in your review datasets folder
-    last_street =reviews_files[-1].split('/')[-1].split('.csv')[0].replace('_', ' ')
     streets_df = pd.read_csv(args.file_path)
-    streets = streets_df.Street.iloc[streets_df.Street.to_list().index(last_street):].unique()
+    if len(reviews_files) != 0 :
+        last_street =reviews_files[-1].split('/')[-1].split('.csv')[0].replace('_', ' ')
+        streets = streets_df.Street.iloc[streets_df.Street.to_list().index(last_street):].unique()
+    else:
+        streets = streets_df.Street.unique()
     #All local names of streets in scraped review dataset
-    local_names = review_df.local_name.unique()
+    local_names = all_review_df.local_name.unique()
     # streets_df = pd.read_csv(args.file_path).iloc[264:]
     # streets = list(streets_df.Street.unique())
 
