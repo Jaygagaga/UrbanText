@@ -294,6 +294,14 @@ def scrapy(url,street,args,driver,page_number=None):
         sleep(5)
     except:
         pass
+    try:
+        morereviews = driver.find_elements(By.XPATH,'//button[contains(text(), "More")]')
+        sleep(3)
+        morereviews.click()
+        print('Clicked "More reviews"')
+        sleep(5)
+    except:
+        pass
     #Expand reviews
     try:
         seemores= driver.find_elements(By.XPATH,'.//button[@aria-label=" See more "]')
