@@ -375,11 +375,13 @@ def scrapy_street(num,street, args,local_names,current_page=None, total_reviews=
                                 sleep(5)
                             except NoSuchElementException:
                                 print('Cannot locate next page')
+                        else:
+                            next_page = None
                         sleep(6)
                         if check_review2(driver): #or check_review1(driver)
-                            if next_page and current_page == next_page:
+                            if next_page and next_page ==current_page:
                                 Scrolling = False
-                            else:
+                            if not next_page or current_page != next_page:
                                 response = BeautifulSoup(driver.page_source, 'html.parser')
                                 sleep(2)
                             if i ==1:
