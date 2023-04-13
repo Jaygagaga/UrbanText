@@ -169,16 +169,19 @@ def get_street_link(index,street,street_name, driver,args,log_street_link_file):
         pass
     if review_exists(driver) == False:
         print('Go the second recommended location in the drop-down list')
-        search = driver.find_element(By.ID, 'searchboxinput')
-        search.clear()
-        sleep(4)
-        search.send_keys(street_name)
-        sleep(4)
-        #Go the second result
         try:
-            driver.find_element(By.XPATH, '//div[@class="sbsb_b"]/div[2]').click()
+            search = driver.find_element(By.ID, 'searchboxinput')
+            search.clear()
             sleep(4)
+            search.send_keys(street_name)
+            sleep(4)
+            #Go the second result
+            try:
+                driver.find_element(By.XPATH, '//div[@class="sbsb_b"]/div[2]').click()
+                sleep(4)
 
+            except:
+                pass
         except:
             pass
     # Go to the review page
