@@ -175,7 +175,7 @@ def main():
     # if os.path.isdir(args.save_path) == True:
     #     csv_files = glob.glob(args.save_path + '/*.csv')
     #     # all_df = concat(csv_files)
-
+    streets_toscrape = [street for street in streets_toscrape if 'Walk' not in street]
     print('Need to scrape data for {} streets'.format(len(streets_toscrape)))
 
     driver.get('https://www.tripadvisor.com.sg/')
