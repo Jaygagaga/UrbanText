@@ -96,7 +96,7 @@ def parse_arguments():
         required=True,
         type=str,
         default='./Data/Reviews/GoogleMap/found_streets_reviews_GoogleMap.txt',
-        help="Record unfound streets or streets without reviews",
+        help="Record found streets whose all reviews has been scraped",
     )
 
 
@@ -406,7 +406,10 @@ def review_parser(response,street,args,total_reviews,total_rating,category,local
         data = {}
         data['review_id'] = box['data-review-id']
         data['user'] = box.find("div",class_='d4r55').text.strip() if box.find("div",class_='d4r55') else None
-        data['guide'] = box.find("div", class_='RfnDt').find_all('span')[0].text if box.find("div", class_='RfnDt') else None
+        try:
+            data['guide'] = box.find("div", class_='RfnDt').find_all('span')[0].text if box.find("div", class_='RfnDt') else None
+        except:
+            data['guide'] = False
         data['review_text'] = box.find("span", class_='wiI7pd').text if box.find("span", class_='wiI7pd') else None
         data['review_date'] = box.find('span',class_='rsqaWe').text if box.find('span',class_='rsqaWe') else None
         try:
@@ -504,7 +507,7 @@ def main():
         streets = [line.split('==')[1] for line in lines]
         # local_names = [line.split('==')[2] for line in lines]
         streets_urls = [line.split('==')[3] for line in lines]
-        print('Check if any scraped data saved locally through record file (found_path).')
+        print('Check if any scraped data saved locally (DIFFERENT found_path from the one with street_urls argument).')
         if os.path.exists(args.found_path) == True:
             with open(args.found_path) as f:
                 lines = f.readlines()
@@ -516,11 +519,13 @@ def main():
             streets_toscrape = [(street, street_url) for street, street_url in zip(streets, streets_urls)]
         # csv_files = glob.glob(args.save_path + '/*.csv')
         # for street, url in zip(streets, streets_urls):
-        #     for street,url in zip(streets,streets_urls):
-        # if len(csv_files) !=0:
-        #     print('Getting streets that have been scraped...')
-        #     all_df = concat(csv_files)
-
+        #     if len(csv_files) !=0:
+        #         print('Getting streets that have been scraped...')
+        #         all_df = concat(csv_files)
+        #         streets_with_reviews = all_df.street.unique()
+        # if os.path.exists(os.path.join(args.save_path, "{}.csv".format('_'.join(street.split())))) == True:
+        #     review_df = pd.read_csv(os.path.join(args.save_path, "{}.csv".format('_'.join(street.split()))))
+        # streets_toscrape = [street for street in streets_with_reviews if ]
         for num, pair in enumerate(streets_toscrape):
             street = pair[0]
             url = pair[1]
