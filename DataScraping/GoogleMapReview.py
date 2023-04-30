@@ -284,34 +284,56 @@ def scrapy(url,street,args,driver,page_number=None):
             total_reviews = review_info.split('\n')[3]
         category = review_info.split('\n')[4]
     # Go to review section
+    #  -- option 1
     try:
         driver.find_element(By.XPATH, './/span[contains(@aria-label, "reviews")]').click()
         sleep(4)
     except:
         pass
+    # try:
+    #     driver.find_element(By.XPATH, './/div[@class="LRkQ2"]').click()
+    #     sleep(2)
+    # except:
+    #     pass
+    #  -- option 2 (scroll down to the "Review summary" section and click reviews button)
+    try:
+        driver.execute_script('arguments[0].scrollIntoView(true);', driver.find_element(By.XPATH, './/h2[contains(text(), "Review summary")]'))
+    except:
+        pass
+    try:
+        driver.find_element(By.XPATH, './/div[@class="jANrlb"]//button').click()
+        sleep(2)
+    except:
+        pass
+    # Expand review texts
     try:
         morereviews = driver.find_elements(By.XPATH,'//span[contains(text(), "More reviews")]')
-        sleep(3)
-        morereviews.click()
+        # sleep(3)
+        for m in morereviews:
+            m.click()
+            sleep(2)
+
         print('Clicked "More reviews"')
         sleep(5)
     except:
         pass
     try:
         morereviews = driver.find_elements(By.XPATH,'//button[contains(text(), "More")]')
-        sleep(3)
-        morereviews.click()
+        # sleep(3)
+        for m in morereviews:
+            m.click()
+            sleep(2)
         print('Clicked "More reviews"')
         sleep(5)
     except:
         pass
     #Expand reviews
     try:
-        seemores= driver.find_elements(By.XPATH,'.//button[@aria-label=" See more "]')
-        for seemore in seemores:
-            seemore.click()
-            print('Clicked "See more"')
+        morereviews= driver.find_elements(By.XPATH,'.//button[@aria-label=" See more "]')
+        for m in morereviews:
+            m.click()
             sleep(2)
+        print('Clicked "See more"')
     except:
         pass
     #Expand picture collections
