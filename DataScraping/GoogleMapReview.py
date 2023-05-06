@@ -161,12 +161,28 @@ def get_street_link(index,street,street_name, driver,args,log_street_link_file):
     #The first result
     try:
         # driver.find_element(By.XPATH,'//*[@id="searchboxinput"]').click()
-        driver.find_elements(By.XPATH, '//div[@class="sbsb_c "]')[1].click()
+        driver.find_elements(By.XPATH, '//div[@class="sbsb_c "]')[0].click()
         print('Go to the first result')
     # driver.find_elements(By.XPATH,'//div[@class="sbsb_c "]/[1]').click()
-        sleep(10)
+        sleep(6)
     except:
         pass
+    # try:
+    #     # driver.find_element(By.XPATH,'//*[@id="searchboxinput"]').click()
+    #     driver.find_elements(By.XPATH, '//div[@class="sbsb_c "]')[1].click()
+    #     print('Go to the first result')
+    # # driver.find_elements(By.XPATH,'//div[@class="sbsb_c "]/[1]').click()
+    #     sleep(6)
+    # except:
+    #     pass
+    if args.city =='New York':
+        try:
+            driver.find_element(By.XPATH,'.//a[@class="hfpxzc"]').click()
+            sleep(4)
+        except:
+            print('Cannot locate {}'.format(street_name))
+
+
     if review_exists(driver) == False:
         print('Go the second recommended location in the drop-down list')
         try:
@@ -212,7 +228,7 @@ def get_street_link(index,street,street_name, driver,args,log_street_link_file):
                 '%s==%s==%s==%s==%s==%s\n' % (index, street, local_name, driver.current_url, category, address))
         open(log_street_link_file, 'a').write(
             '%s==%s==%s==%s==%s==%s\n' % (index, street, local_name, driver.current_url, category, address))
-        print('Saved url link to street {}'.format(street))
+        print('Saved url link for street {}'.format(street))
         driver.close()
         driver.switch_to.window(driver.window_handles[0])
         sleep(5)
