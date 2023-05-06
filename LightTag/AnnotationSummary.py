@@ -6,6 +6,8 @@ from pprint import pprint
 from nltk.stem.snowball import SnowballStemmer
 snowBallStemmer = SnowballStemmer("english")
 
+stopwords = ['a', 'the', 'and', 'here', 'there', 'for', 'of', 'in', 'is', 'that', 'other', 'well','just','time',
+             'to', 'with','my', 'area', 'from', 'it']
 
 
 
@@ -71,7 +73,7 @@ def parse_json(example):
         print('-----Parsing annotations No. {}'.format(num))
         tags.append(parse_annotations(annotation)[0][0])
         tokens.append(parse_annotations(annotation)[0][1])
-        token_index.append(parse_annotations(annotation)[0][1])
+        token_index.append(parse_annotations(annotation)[0][2])
 
         revieweds.append(parse_annotations(annotation)[1])
         annotators.append(parse_annotations(annotation)[2])
@@ -118,11 +120,12 @@ def border_interect_condition_2(string1, string2):
         return False
 
 
-def border_interect_condition_more(string1, string2):
+def border_interect_condition_more(string1, string2,stopwords):
+    stopwords = [snowBallStemmer.stem(t) for t in stopwords]
     assert len(string1.split()) >= 3
     assert len(string2.split()) >= 3
     # print(string1.split(), string2.split())
-    if len(intersection(string1.split(), string2.split())) >= 2:
+    if len(intersection([s for s in string1.split() if s not in stopwords and s not in [' ', ',', ', ']], [s for s in string2.split() if s not in stopwords and s not in [' ', ',', ', ']])) >= 2:
         return True
     else:
         return False
@@ -236,7 +239,7 @@ def main():
             print('Check confusion cases for token No. {} (more tokens case)'.format(i))
             for another_token in [t for t in same_length_tokens_more if t != token]:
                 # print(token,another_token)
-                if border_interect_condition_more(token,another_token):
+                if border_interect_condition_more(token,another_token, stopwords):
                     token_tags_inter_more = add2dic(token, tag,another_token, token_tags_inter_more, summary)
 
 
@@ -259,14 +262,19 @@ def main():
         print(token, option)
         # similar_tokens = [i[0] for i in option]
         # similar_tags = [i[1] for i in option]
-        summary.loc[summary.stemmed_token==token, 'similar_tokens_2'] =', '.join([i[0] for i in option])
-        summary.loc[summary.stemmed_token == token, 'similar_tags_2'] = ', '.join([i[1] for i in option])
+        summary.loc[summary.stemmed_token==token, 'similar_tokens_2'] ='=='.join([i[0] for i in option])
+        summary.loc[summary.stemmed_token == token, 'similar_tags_2'] = '=='.join([i[1] for i in option])
     for token,option in token_tags_inter_more.items():
-        summary.loc[summary.stemmed_token == token, 'similar_tokens_more'] =', '.join([i[0] for i in option])
-        summary.loc[summary.stemmed_token == token, 'similar_tags_more'] = ', '.join([i[1] for i in option])
+        summary.loc[summary.stemmed_token == token, 'similar_tokens_more'] ='=='.join([i[0] for i in option])
+        summary.loc[summary.stemmed_token == token, 'similar_tags_more'] = '=='.join([i[1] for i in option])
     if token_tags_exact:
         for token,option in token_tags_exact.items():
-            summary.loc[summary.stemmed_token == token, 'other_tag_option_exact'] = ', '.join(option)
+            summary.loc[summary.stemmed_token == token, 'other_tag_option_exact'] = '=='.join(option)
+
+
+    summary['similar_tags_2_count'] = summary.similar_tags_2.map(lambda x: len(x.split('==')) if x else None)
+    summary['similar_tags_more_count'] = summary.similar_tags_more.map(lambda x: len(x.split('==')) if x else None)
+
     print('Save annotation summary')
     summary.to_csv(args.save_summary)
 
