@@ -1,5 +1,6 @@
 from collections import defaultdict
-
+import plotly
+import plotly.express as px
 import requests
 import json
 import pandas as pd
@@ -371,34 +372,34 @@ class ConfigModels(object):
 def main():
     args = parse_arguments()
 
-    text_files = glob.glob(args.helper_path + '/*.txt')
-
-    dictname2tagname = {
-        # 'activity_dictionary_eng':'ACTIVITY',
-        # 'spatial_dictionary_eng':'SPATIAL',
-        # 'smell_dictionary_eng':'SMELL',
-        'PERSON': 'PERSON',
-        'WEATHER': 'WEATHER',
-
-    }
-    if args.reformat_dict == 1:
-        fac_path = './Data/Helpers/facility_dictionary_eng.txt'
-        act_path = './Data/Helpers/activity_dictionary_eng.txt'
-        act_coding = ['401', '402', '403', '404', '405', '406', '407', '408']
-        fac_coding = ['301', '302', '303', '304', '305', '306', '307']
-        fac_save_path = './Data/Helpers/facility_dictionary_eng_.txt'
-        act_save_path = './Data/Helpers/activity_dictionary_eng_.txt'
-
-        reformat_dict = ReformatDict()
-        reformat_dict.reformat_dic(fac_path, fac_save_path, fac_coding)
-        reformat_dict.reformat_dic(act_path, act_save_path, act_coding)
-    dict_with_levels = ['SENSORY_SMELL.txt','SENSORY_SOUND.txt','SPATIAL.txt', 'FACILITY.txt','ACTIVITY.txt']
-    print('Configuring dictionaries as look-tables for keyword matching')
-    config_dict = ConfigDict(helper_path=args.helper_path, dict_with_levels=dict_with_levels,
-                             dictname2tagname=dictname2tagname)
-    dictionaries = config_dict.concat(text_files)
-    print('Available dictionary names: {}'.format(dictionaries.keys()))
-    print('Fetching texts from LightTag')
+    # text_files = glob.glob(args.helper_path + '/*.txt')
+    #
+    # dictname2tagname = {
+    #     # 'activity_dictionary_eng':'ACTIVITY',
+    #     # 'spatial_dictionary_eng':'SPATIAL',
+    #     # 'smell_dictionary_eng':'SMELL',
+    #     'PERSON': 'PERSON',
+    #     'WEATHER': 'WEATHER',
+    #
+    # }
+    # if args.reformat_dict == 1:
+    #     fac_path = './Data/Helpers/facility_dictionary_eng.txt'
+    #     act_path = './Data/Helpers/activity_dictionary_eng.txt'
+    #     act_coding = ['401', '402', '403', '404', '405', '406', '407', '408']
+    #     fac_coding = ['301', '302', '303', '304', '305', '306', '307']
+    #     fac_save_path = './Data/Helpers/facility_dictionary_eng_.txt'
+    #     act_save_path = './Data/Helpers/activity_dictionary_eng_.txt'
+    #
+    #     reformat_dict = ReformatDict()
+    #     reformat_dict.reformat_dic(fac_path, fac_save_path, fac_coding)
+    #     reformat_dict.reformat_dic(act_path, act_save_path, act_coding)
+    # dict_with_levels = ['SENSORY_SMELL.txt','SENSORY_SOUND.txt','SPATIAL.txt', 'FACILITY.txt','ACTIVITY.txt']
+    # print('Configuring dictionaries as look-tables for keyword matching')
+    # config_dict = ConfigDict(helper_path=args.helper_path, dict_with_levels=dict_with_levels,
+    #                          dictname2tagname=dictname2tagname)
+    # dictionaries = config_dict.concat(text_files)
+    # print('Available dictionary names: {}'.format(dictionaries.keys()))
+    # print('Fetching texts from LightTag')
     session = LTSession(workspace='urbantext0', user='e0441605@u.nus.edu', pwd='Wxhy137-')
     dataset1 = session.get(
         'v1/projects/default/datasets/googlemap_singapore/examples/').json()  # Use the slug of the dataset to fetch it from the datasets endpoint
@@ -408,18 +409,18 @@ def main():
     # print(len(dataset1), len(dataset2), len(examples))
     # print('Setting up models for extracting entities as suggestions')
     # examples =examples[:1000]
-    models = ConfigModels(examples=dataset1,dictionaries=dictionaries)
+    # models = ConfigModels(examples=dataset1,dictionaries=dictionaries)
     print('Running models to get different entity suggestions')
 
-    result_dict = models.process_multiple_examples()
+    # result_dict = models.process_multiple_examples()
     print('Finished!')
     #Due to bugs in models.process_with_dict, have to remove duplicated suggetion from the list
-    duplicated_removed =[i for n, i in enumerate(result_dict['models']['dictionary_search'])
-            if i not in result_dict['models']['dictionary_search'][n + 1:]]
-    result_dict['models']['dictionary_search'] = duplicated_removed
-    args.suggestion_json_path= './LightTag/NER_suggestions_GM_SG.json'
-    with open(args.suggestion_json_path, "w") as fp:
-        json.dump(result_dict, fp)
+    # duplicated_removed =[i for n, i in enumerate(result_dict['models']['dictionary_search'])
+    #         if i not in result_dict['models']['dictionary_search'][n + 1:]]
+    # result_dict['models']['dictionary_search'] = duplicated_removed
+    # args.suggestion_json_path= './LightTag/NER_suggestions_GM_SG.json'
+    # with open(args.suggestion_json_path, "w") as fp:
+    #     json.dump(result_dict, fp)
     # model_dict1 = {  # Dictionary of models, each has a list of suggestions
     #     'dictionary_search': [], }
     # for num, example in enumerate(models.examples):
@@ -430,40 +431,40 @@ def main():
 
     print('Got entity suggestions from NER models')
     # This is what the results look like
-    model_outputs = result_dict['models']
-    print(model_outputs['stanford'][0])
-    maper_dict = dict(ORGANIZATION='ORG', CARDINAL='NUMBER', LOCATION='GPE', COUNTRY='GPE',
-                      STATE_OR_PROVINCE='GPE',TITLE = 'PERSON',DATE='TIME',
-                      NATIONALITY='NORP', WORK_OF_ART='MISC', CITY='GPE', IDEOLOGY='NORP', PER='PERSON',
-                      ORDINAL='NUMBER',
-                      PRODUCT='MISC', RELIGION='NORP'
-                      )
+    # model_outputs = result_dict['models']
+    # print(model_outputs['stanford'][0])
+    # maper_dict = dict(ORGANIZATION='ORG', CARDINAL='NUMBER', LOCATION='GPE', COUNTRY='GPE',
+    #                   STATE_OR_PROVINCE='GPE',TITLE = 'PERSON',DATE='TIME',
+    #                   NATIONALITY='NORP', WORK_OF_ART='MISC', CITY='GPE', IDEOLOGY='NORP', PER='PERSON',
+    #                   ORDINAL='NUMBER',
+    #                   PRODUCT='MISC', RELIGION='NORP'
+    #                   )
 
-    replace_if_need = lambda tag: maper_dict.get(tag,tag)  # if the tag is in the dict, give its replacement, otherwise keep it
+    # replace_if_need = lambda tag: maper_dict.get(tag,tag)  # if the tag is in the dict, give its replacement, otherwise keep it
 
-    def normalize_suggestion(suggestion):
-        suggestion['tag'] = replace_if_need(suggestion['tag'])
-        return suggestion
-
-    AllSuggestions = pd.DataFrame()
-    for model_name in model_outputs:
-        suggestions_pd = pd.DataFrame(model_outputs[model_name])
-        suggestions_pd['model'] = model_name
-        AllSuggestions = AllSuggestions.append(suggestions_pd)
-    print(AllSuggestions.pivot_table(index='model',columns='tag',values='start',aggfunc=len).fillna(0).T)
+    # def normalize_suggestion(suggestion):
+    #     suggestion['tag'] = replace_if_need(suggestion['tag'])
+    #     return suggestion
+    #
+    # AllSuggestions = pd.DataFrame()
+    # for model_name in model_outputs:
+    #     suggestions_pd = pd.DataFrame(model_outputs[model_name])
+    #     suggestions_pd['model'] = model_name
+    #     AllSuggestions = AllSuggestions.append(suggestions_pd)
+    # print(AllSuggestions.pivot_table(index='model',columns='tag',values='start',aggfunc=len).fillna(0).T)
     """Group suggestions by examples, and add detected tag to original content"""
-    suggestions_groupby_contents ={}
-    for model_name, suggestions in model_outputs.items():
-        for suggestion in suggestions:
-            if 'example_id' in suggestion:
-                if suggestion['example_id'] not in suggestions_groupby_contents:
-                    # temp = suggestion
-                    # temp.pop('example_id')
-                    suggestions_groupby_contents[suggestion['example_id']] = [suggestion]
-                else:
-                    # temp = suggestion
-                    # temp.pop('example_id')
-                    suggestions_groupby_contents[suggestion['example_id']] += [suggestion]
+    # suggestions_groupby_contents ={}
+    # for model_name, suggestions in model_outputs.items():
+    #     for suggestion in suggestions:
+    #         if 'example_id' in suggestion:
+    #             if suggestion['example_id'] not in suggestions_groupby_contents:
+    #                 # temp = suggestion
+    #                 # temp.pop('example_id')
+    #                 suggestions_groupby_contents[suggestion['example_id']] = [suggestion]
+    #             else:
+    #                 # temp = suggestion
+    #                 # temp.pop('example_id')
+    #                 suggestions_groupby_contents[suggestion['example_id']] += [suggestion]
     import itertools
     def solve_nested(lst):
         removed = []
@@ -472,50 +473,50 @@ def main():
                 removed.append(x[0])
         return [i for i in lst if i not in removed]
 
-
-    text_with_suggestions = []
-    for id, example in enumerate(dataset1):
-        print('No. {} example'.format(id))
-        # content = examples[6496]['content']
-        content = example['content']
-        # print(example)
-        review_id = example['metadata']['review_id']
-        # print(review_id)
-        # count = -1
-        for example_id, suggestions in suggestions_groupby_contents.items():
-            # count +=1
-            # print('No.',count)
-            #remove duplicated suggestion dicts
-            suggestions = [i for n, i in enumerate(suggestions) if i not in suggestions[n + 1:]]
-            if example_id == example['id']:
-                # print(suggestions[0])
-                values_start_end=[[i['text'],i['tag'], int(i['start']), int(i['end'])] if 'text' in i else [i['value'],i['tag'], int(i['start']), int(i['end'])] for i in suggestions]
-                # print('values_start_end',values_start_end)
-                #Sort suggestion list by tag's end position
-                values_sorted= sorted(values_start_end, key=lambda x: x[3])
-                #Retain the longest tag
-                values_sorted = solve_nested(values_sorted)
-                new_content = content
-                for num, suggestion in enumerate(values_sorted):
-                    # print('NO.',num)
-                    # print('suggestion0', suggestion)
-                    value_lens = len(' $${}$$ '.format(suggestion[1])) + 1
-                    # print('1',suggestion)
-
-                    if num >0:
-                        # suggestion[2] += previous_value_lens
-                        try:
-                            new_start = new_content.index(suggestion[0]) + len(suggestion[0])+1
-                            new_content = new_content[:new_start] + ' $${}$$ '.format(suggestion[1].upper()) + new_content[new_start:]
-                        except:
-                            pass
-                    else:
-                        # print('suggestion',suggestion)
-                        # print(content)
-                        new_content = new_content[:suggestion[3]] + ' $${}$$ '.format(suggestion[1].upper()) + new_content[suggestion[3]:]
-                    previous_value_lens =  value_lens
-
-                text_with_suggestions.append((review_id,new_content))
+    print('Getting texts with suggestions')
+    # text_with_suggestions = []
+    # for id, example in enumerate(dataset1):
+    #     print('No. {} example'.format(id))
+    #     # content = examples[6496]['content']
+    #     content = example['content']
+    #     # print(example)
+    #     review_id = example['metadata']['review_id']
+    #     # print(review_id)
+    #     # count = -1
+    #     for example_id, suggestions in suggestions_groupby_contents.items():
+    #         # count +=1
+    #         # print('No.',count)
+    #         #remove duplicated suggestion dicts
+    #         suggestions = [i for n, i in enumerate(suggestions) if i not in suggestions[n + 1:]]
+    #         if example_id == example['id']:
+    #             # print(suggestions[0])
+    #             values_start_end=[[i['text'],i['tag'], int(i['start']), int(i['end'])] if 'text' in i else [i['value'],i['tag'], int(i['start']), int(i['end'])] for i in suggestions]
+    #             # print('values_start_end',values_start_end)
+    #             #Sort suggestion list by tag's end position
+    #             values_sorted= sorted(values_start_end, key=lambda x: x[3])
+    #             #Retain the longest tag
+    #             values_sorted = solve_nested(values_sorted)
+    #             new_content = content
+    #             for num, suggestion in enumerate(values_sorted):
+    #                 # print('NO.',num)
+    #                 # print('suggestion0', suggestion)
+    #                 value_lens = len(' $${}$$ '.format(suggestion[1])) + 1
+    #                 # print('1',suggestion)
+    #
+    #                 if num >0:
+    #                     # suggestion[2] += previous_value_lens
+    #                     try:
+    #                         new_start = new_content.index(suggestion[0]) + len(suggestion[0])+1
+    #                         new_content = new_content[:new_start] + ' $${}$$ '.format(suggestion[1].upper()) + new_content[new_start:]
+    #                     except:
+    #                         pass
+    #                 else:
+    #                     # print('suggestion',suggestion)
+    #                     # print(content)
+    #                     new_content = new_content[:suggestion[3]] + ' $${}$$ '.format(suggestion[1].upper()) + new_content[suggestion[3]:]
+    #                 previous_value_lens =  value_lens
+    #
+    #             text_with_suggestions.append((review_id,new_content))
                 # break
     # gm_path = './Data/Reviews/GoogleMap/all_reviews.csv'
     # ta_path = './Data/Reviews/TripAdvisor/all_reviews.csv'
@@ -524,49 +525,58 @@ def main():
 
     # data1.rename(columns = {'picture_url':'picture_urls'}, inplace=True)
     # data = pd.read_csv(args.file_path)
-    data = pd.read_csv('./Data/Reviews/GoogleMap_Singapore/all_reviews.csv')
-    common_cols = ['review_id', 'review_text', 'review_date', 'review_rating', 'picture_urls', 'total_reviews', 'street', 'local_name', 'page_number', 'word_length']
-    df = data[common_cols]
-    # data1 = data1[common_cols]
-    # df = pd.concat([data,data1])
-    new =  pd.DataFrame(text_with_suggestions, columns =['review_id', 'text_with_suggestions'])
-    #Subseting dataset by text_with_suggestions
-    df_ = df[df.review_id.isin(new.review_id.to_list())]
-    #Integrate text_with_suggestions property to subset
-    new_df = df_.merge(new, how = 'left', on = 'review_id')
-    # new_df_ = new_df[new_df.text_with_suggestions.isnull()==False]
-    new_df['text_with_suggestions'] =  new_df['text_with_suggestions'].fillna(new_df.review_text)
-
-    new_df = new_df.sample(frac=1, random_state=1)
-    df_team2 = new_df.iloc[:227]
+    # data = pd.read_csv('./Data/Reviews/GoogleMap_Singapore/all_reviews.csv')
+    # common_cols = ['review_id', 'review_text', 'review_date', 'review_rating', 'picture_urls', 'total_reviews', 'street', 'local_name', 'page_number', 'word_length']
+    # df = data[common_cols]
+    # # data1 = data1[common_cols]
+    # # df = pd.concat([data,data1])
+    # new =  pd.DataFrame(text_with_suggestions, columns =['review_id', 'text_with_suggestions'])
+    # #Subseting dataset by text_with_suggestions
+    # df_ = df[df.review_id.isin(new.review_id.to_list())]
+    # #Integrate text_with_suggestions property to subset
+    # new_df = df_.merge(new, how = 'left', on = 'review_id')
+    # # new_df_ = new_df[new_df.text_with_suggestions.isnull()==False]
+    # new_df['text_with_suggestions'] =  new_df['text_with_suggestions'].fillna(new_df.review_text)
+    #
+    # new_df = new_df.sample(frac=1, random_state=1)
+    # df_team2 = new_df.iloc[:337]
     # df_team2 = new_df.iloc[227:227*2]
     # df_team3 = new_df.iloc[227*2:227 * 3]
     # df_team1.to_csv('./Data/Reviews/pilot_team1.csv')
     # df_team2.to_csv('./Data/Reviews/pilot_team2.csv')
     # df_team3.to_csv('./Data/Reviews/pilot_team3.csv')
-    new_df.to_csv('./Data/Reviews/GoogleMap_Singapore.csv')
-    df_team2.to_csv('./Data/Reviews/GoogleMap_Singapore_team2.csv')
-    new_df.to_csv(args.save_path)
+    # new_df.to_csv('./Data/Reviews/GoogleMap_Singapore.csv')
+    # df_team2.to_csv('./Data/Reviews/GoogleMap_Singapore_team2.csv')
+    # new_df.to_csv(args.save_path)
     # for model_name in model_outputs:
     #     model_outputs[model_name] = list(map(normalize_suggestion, model_outputs[model_name]))
     #
     # print('defining a new schema')
-    tags = AllSuggestions.tag.unique().tolist()
-    tags_ =[t.upper() for t in tags]
-    print('Reading tag descriptions')
-    with open('./Data/tags.txt', 'r') as f:
-        tags_des = f.readlines()
-        tags_des = [l.replace('\n', '') for l in tags_des if l != '\n']
-    tags_des_dict = {l.split(':')[0].upper(): l.split(':')[1].strip() for l in tags_des}
+    # tags = AllSuggestions.tag.unique().tolist()
+    # tags_ =[t.upper() for t in tags]
+    # print('Reading tag descriptions')
+    tags_dict= {}
+    file = open('./Data/Helpers/tags.txt', 'r')
+    for line in file:
+        if line and line != '\n':
+            tags_dict[line.split(':')[0]] = line.split(':')[-1].strip().replace('\n', '')
 
-    additional_tags = [t for t in tags_des_dict if t not in tags_]
+
+
+    additional_tags = [t for t in tags_dict if t not in tags_]
     no_tags = ['LANGUAGE', 'CITY', 'LOCATION', 'MISC', 'CAUSE_OF_DEATH', 'RELIGION', 'FAC','SET',  'LAW', 'MONEY','PERCENT','PRODUCT', 'NUMBER',
                'CRIMINAL_CHARGE','TITLE','STATE_OR_PROVINCE', 'NATIONALITY','LOC', 'ORGANIZATION']
+    # schema_def = {
+    #     'name': 'Combined Tags New',
+    #     'tags': [{'name': t, 'description': tags_dict[t] if t in tags_dict else t} for t in tags_+additional_tags if t not in no_tags],
+    #     'classification_types':[{'name': 'Negative', 'description': 'Negative sentiment'},
+    #                             {'name': 'Positive', 'description': 'Positive sentiment'}]
+    # }
     schema_def = {
-        'name': 'Combined Tags New',
-        'tags': [{'name': t, 'description': tags_des_dict[t] if t in tags_des_dict else t} for t in tags_+additional_tags if t not in no_tags],
-        'classification_types':[{'name': 'Negative', 'description': 'Negative sentiment'},
-                                {'name': 'Positive', 'description': 'Positive sentiment'}]
+        'name': 'Tags_v2',
+        'tags': [{'name': t, 'description': tags_dict[t] } for t in tags_dict.keys()],
+        'classification_types': [{'name': 'Negative', 'description': 'Negative sentiment on document level'},
+                                 {'name': 'Positive', 'description': 'Positive sentiment on document level'}]
     }
 
     new_schema = session.post('v1/projects/default/schemas/bulk/', json=schema_def)
@@ -643,6 +653,7 @@ def main():
     # session.post('v1/projects/default/teams/', json=Team3)
     # teams = session.get('v1/projects/default/teams/').json()
     # pprint(teams)
+
 
 
 if __name__ =='__main__':
