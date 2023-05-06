@@ -135,15 +135,15 @@ def main():
     os.chdir('/Users/jie/UrbanText')
     print('Current root directory: ', os.getcwd())
     args = parse_arguments()
-    reviews_files = glob.glob(args.save_path+ '/*.csv')
-    all_review_df = pd.DataFrame()
-    for i in reviews_files:
-        df = pd.read_csv(i, encoding='utf-8',on_bad_lines='skip')
-        all_review_df = pd.concat([all_review_df, df])
-    #Last street in your review datasets folder
     streets_df = pd.read_csv(args.file_path)
-    if len(reviews_files) != 0 :
-        last_street =reviews_files[-1].split('/')[-1].split('.csv')[0].replace('_', ' ')
+    reviews_files = glob.glob(args.save_path + '/*.csv')
+    if len(reviews_files) != 0:
+        all_review_df = pd.DataFrame()
+        for i in reviews_files:
+            df = pd.read_csv(i, encoding='utf-8', on_bad_lines='skip')
+            all_review_df = pd.concat([all_review_df, df])
+            # Last street in your review datasets folder
+        last_street = reviews_files[-1].split('/')[-1].split('.csv')[0].replace('_', ' ')
         streets = streets_df.Street.iloc[streets_df.Street.to_list().index(last_street):].unique()
     else:
         streets = streets_df.Street.unique()
@@ -430,7 +430,7 @@ def review_parser(response,street,args,i,total_reviews,current_page, local_names
     except:
         local_name =None
         print('Cannot get local name for {}'.format(street))
-    if local_name not in local_names:
+    if local_name and local_name not in ['Tower of London'] and local_name not in local_names:
         try:
             reviews_boxes = response.find("div", class_="LbPSX").find_all('div', class_="C") if response.find("div", class_="LbPSX") else None
             #response.find_all('div', class_='YibKl MC R2 Gi z Z BB pBbQr')
