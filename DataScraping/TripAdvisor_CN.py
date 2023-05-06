@@ -77,6 +77,7 @@ def parse_arguments():
         default='./Data/Reviews/TripAdvisor/loc_reviews/loc_links_Wuhan.csv',
         help="local path where you want to save your scraped data",
     )
+
     parser.add_argument(
         '-s2',
         "--save_path",
@@ -107,7 +108,7 @@ def parse_arguments():
         required=True,
         type=str,
         default='street_urls',
-        help="Get links to street on GoogleMap",
+        help="Get links to street on TripAdvisor",
     )
     # args = parser.parse_args(args=[])
     args = parser.parse_args()#args=[]
